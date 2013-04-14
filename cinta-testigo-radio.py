@@ -1108,47 +1108,47 @@ class MyMainWindow(QMainWindow):
         # Parse the options
 
         # stereo, mono
-        if self.combo3.currentText() is 'MONO':
+        if self.combo3.currentText() == 'MONO':
             inp.setchannels(1)
             print(' INFO: Using Mono, 1 Channel . . . ')
-        elif self.combo3.currentText() is 'STEREO':
+        elif self.combo3.currentText() == 'STEREO':
             inp.setchannels(2)
             print(' INFO: Using Stereo, 2 Channels . . . ')
-        elif self.combo3.currentText() is 'Surround':
+        elif self.combo3.currentText() == 'Surround':
             inp.setchannels(6)
             print(' INFO: Using 3D Surround, 6 Channels . . . ')
             print((' WARNING: 6 Channels 3D Surround is EXPERIMENTAL!!\n' * 9))
 
         # '44100', '96000', '48000', '32000', '22050', '16000', '11025', '8000'
-        if self.combo4.currentText() is '44100':
+        if self.combo4.currentText() == '44100':
             bitrate = 44100
             inp.setrate(bitrate)
             print(' INFO: Using 44100 Hz per Second . . . ')
-        elif self.combo4.currentText() is '96000':
+        elif self.combo4.currentText() == '96000':
             bitrate = 96000
             inp.setrate(bitrate)
             print(' INFO: Using 96000 Hz per Second . . . ')
-        elif self.combo4.currentText() is '48000':
+        elif self.combo4.currentText() == '48000':
             bitrate = 48000
             inp.setrate(bitrate)
             print(' INFO: Using 48000 Hz per Second . . . ')
-        elif self.combo4.currentText() is '32000':
+        elif self.combo4.currentText() == '32000':
             bitrate = 32000
             inp.setrate(bitrate)
             print(' INFO: Using 32000 Hz per Second . . . ')
-        elif self.combo4.currentText() is '22050':
+        elif self.combo4.currentText() == '22050':
             bitrate = 22050
             inp.setrate(bitrate)
             print(' INFO: Using 22050 Hz per Second . . . ')
-        elif self.combo4.currentText() is '16000':
+        elif self.combo4.currentText() == '16000':
             bitrate = 16000
             inp.setrate(bitrate)
             print(' INFO: Using 16000 Hz per Second . . . ')
-        elif self.combo4.currentText() is '11025':
+        elif self.combo4.currentText() == '11025':
             bitrate = 11025
             inp.setrate(bitrate)
             print(' INFO: Using 11025 Hz per Second . . . ')
-        elif self.combo4.currentText() is '8000':
+        elif self.combo4.currentText() == '8000':
             bitrate = 8000
             inp.setrate(bitrate)
             print(' INFO: Using 8000 Hz per Second . . . ')

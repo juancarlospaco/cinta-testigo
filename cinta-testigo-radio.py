@@ -17,8 +17,8 @@
 # If you hackin bro, read: http://pyalsaaudio.sourceforge.net/libalsaaudio.html
 
 # metadata
-__doc__ = ' Cinta Testigo para Radios en Ubuntu '
-__version__ = ' 0.666 '
+' Cinta Testigo para Radios en Ubuntu '
+__version__ = ' 0.8 '
 __license__ = ' GPL '
 __author__ = ' juancarlospaco '
 __email__ = ' juancarlospaco@ubuntu.com '
@@ -26,44 +26,81 @@ __email__ = ' juancarlospaco@ubuntu.com '
 
 # imports
 import sys
-import os
-import webbrowser
-import datetime
-import string
-import commands
-import urllib2
+from os import geteuid
+from os import linesep
+from os import statvfs
+from os import getcwd
+from os import mkdir
+from os import path
+from shutil import make_archive
+from random import randint
+from subprocess import call
+from subprocess import check_output as getoutput
+from webbrowser import open_new_tab
+from datetime import datetime
+from string import punctuation
+
 try:
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from PyQt4 import QtCore
-    from PyQt4 import QtGui
+    from PyQt4.QtCore import Qt
+    from PyQt4.QtCore import QRect
+    from PyQt4.QtCore import QTimer
+
+    from PyQt4.QtGui import QMainWindow
+    from PyQt4.QtGui import QLabel
+    from PyQt4.QtGui import QProgressBar
+    from PyQt4.QtGui import QIcon
+    from PyQt4.QtGui import QAction
+    from PyQt4.QtGui import QPushButton
+    from PyQt4.QtGui import QComboBox
+    from PyQt4.QtGui import QApplication
+    from PyQt4.QtGui import QWidget
+    from PyQt4.QtGui import QFont
+    from PyQt4.QtGui import QVBoxLayout
+    from PyQt4.QtGui import QLCDNumber
+    from PyQt4.QtGui import QSlider
+    from PyQt4.QtGui import QDial
+    from PyQt4.QtGui import QFrame
+    from PyQt4.QtGui import QCursor
+    from PyQt4.QtGui import QDialogButtonBox
+    from PyQt4.QtGui import QPalette
+    from PyQt4.QtGui import QMessageBox
+    from PyQt4.QtGui import QPainter
+    from PyQt4.QtGui import QColor
+    from PyQt4.QtGui import QDialog
+    from PyQt4.QtGui import QColorDialog
+    from PyQt4.QtGui import QLineEdit
+    from PyQt4.QtGui import QPen
+    from PyQt4.QtGui import QFileDialog
+    from PyQt4.QtGui import QPixmap
 except ImportError:
     exit(" ERROR: No Qt4 avaliable!\n (sudo apt-get install python-qt4)")
+
 try:
     import alsaaudio
 except ImportError:
     exit(' ERROR: AlsaAudio not found,(sudo apt-get install python-alsaaudio)')
+
 try:
     import numpy
 except ImportError:
     exit(' ERROR: NumPy not found !, ( sudo apt-get install python-numpy )')
 
 
-print('#' * 80)
+print(('#' * 80))
 
 
 # print program info
-print(__doc__ + ',v.' + __version__ + '(' + __license__ + '),by ' + __author__)
+print((''.join((__doc__, ',v.', __version__, __license__, ',by ', __author__))))
 
 
 # root check
-if os.geteuid() == 0:
+if geteuid() == 0:
     exit(" ERROR: Do NOT Run as root!, NO ejecutar como root!\n bye noob...\n")
 else:
     pass
 
 
-print(' INFO: Starting ' + str(datetime.datetime.now()))
+print((' INFO: Starting ' + str(datetime.now())))
 
 
 ###############################################################################
@@ -80,25 +117,25 @@ class MyMainWindow(QMainWindow):
         self.statusBar().showMessage(__doc__)
 
         # Main Window initial Geometry
-        self.resize(940, 640)
+        self.resize(640, 700)
 
         # Main Window initial Title
         self.setWindowTitle(__doc__)
 
         # Main Window Minimum Size
-        self.setMinimumSize(940, 640)
+        self.setMinimumSize(640, 700)
 
         # Main Window Maximum Size
-        self.setMaximumSize(1024, 800)
+        self.setMaximumSize(800, 840)
 
         # Main Window initial ToolTip
         self.setToolTip(__doc__)
 
         # Main Window initial Font type
-        self.setFont(QtGui.QFont('Ubuntu Light', 10))
+        self.setFont(QFont('Ubuntu Light', 10))
 
         # Set Window Icon, if find on filesystem or default to a STD one
-        self.setWindowIcon(QtGui.QIcon.fromTheme("face-devilish"))
+        self.setWindowIcon(QIcon.fromTheme("face-devilish"))
         self.setStyleSheet('''
             QToolTip {
                 border: 1px solid black;
@@ -110,7 +147,7 @@ class MyMainWindow(QMainWindow):
 
             QWidget {
                 color: #b1b1b1;
-                background-color: #323232;
+                background-color: rgba(75, 75, 75, 200);
             }
 
             QWidget:item:hover {
@@ -162,7 +199,6 @@ class MyMainWindow(QMainWindow):
 
             QWidget:disabled {
                 color: #404040;
-                background-color: #323232;
             }
 
             QAbstractItemView {
@@ -650,105 +686,92 @@ class MyMainWindow(QMainWindow):
          ''')
 
         # this always gives the current user Home Folder, cross-platform
-        homedir = os.path.expanduser("~")
+        homedir = path.expanduser("~")
         # print homedir and extensions variables for debug
-        print(' INFO: My Home is ' + homedir + '...')
+        print((' INFO: My Home is ' + homedir))
 
         # Menu Bar inicialization and detail definitions
-        menu_salir = QtGui.QAction(QtGui.QIcon.fromTheme("application-exit"),
+        menu_salir = QAction(QIcon.fromTheme("application-exit"),
             'Quit | Salir', self)
         # set the quit shortcut to CTRL + Q
         menu_salir.setShortcut('Ctrl+Q')
         # set the triggered signal to the quit slot
         menu_salir.setStatusTip('Quit | Salir')
-        self.connect(menu_salir, QtCore.SIGNAL('triggered()'), QtGui.qApp,
-            QtCore.SLOT('quit()'))
+        menu_salir.triggered.connect(self.close)
 
         # qt color setting via qcolordialog menu item
-        menu_color = QtGui.QAction(
-            QtGui.QIcon.fromTheme("preferences-system"),
+        menu_color = QAction(QIcon.fromTheme("preferences-system"),
             'Set GUI Colors | Configurar Colores de GUI', self)
         # set the status tip for this menu item
         menu_color.setStatusTip('Manually set GUI Colors...')
         # set the triggered signal to the showQColorDialog
-        self.connect(menu_color, QtCore.SIGNAL('triggered()'),
-            self.showQColorDialog)
+        menu_color.triggered.connect(self.showQColorDialog)
 
         # qt window title setting via qdialog menu item
-        menu_tit = QtGui.QAction(
-            QtGui.QIcon.fromTheme("preferences-system"),
+        menu_tit = QAction(QIcon.fromTheme("preferences-system"),
             'Set Window Title | Configurar Titulo de ventana', self)
         # set the status tip for this menu item
         menu_tit.setStatusTip('Manually set Window Title...')
         # set the triggered signal to the showQColorDialog
-        self.connect(menu_tit, QtCore.SIGNAL('triggered()'),
-            self.seTitle)
+        menu_tit.triggered.connect(self.seTitle)
 
         # keys help
-        menu_keys = QtGui.QAction(QtGui.QIcon.fromTheme("help-faq"),
-            'Key Shorcuts | Atajos de Teclado', self)
+        menu_keys = QAction(QIcon.fromTheme("help-faq"), 'Shorcuts | Atajos',
+                                                                        self)
         # set the status tip for this menu item
         menu_keys.setStatusTip('Key Shorcuts')
         # set the triggered signal to lambda gui that shows key shortcuts
-        self.connect(menu_keys, QtCore.SIGNAL('triggered()'),
-            lambda: QMessageBox.about(self, __doc__, ' CTRL + Q = Quit '))
+        menu_keys.triggered.connect(lambda:
+                        QMessageBox.about(self, __doc__, ' CTRL + Q = Quit '))
 
         # about faq
-        menu_faq = QtGui.QAction(QtGui.QIcon.fromTheme("help-faq"),
-            'Donate | Donar', self)
+        menu_faq = QAction(QIcon.fromTheme("help-faq"), 'Donate | Donar', self)
         # set the status tip for this menu item
         menu_faq.setStatusTip(' Donate $5 !, No credit card required !')
         # set the triggered signal to lambda gui that shows the FAQ
-        self.connect(menu_faq, QtCore.SIGNAL('triggered()'),
-            lambda: webbrowser.open_new_tab('http://goo.gl/cB7PR'))
+        menu_faq.triggered.connect(lambda: open_new_tab('http://goo.gl/cB7PR'))
 
         # report a bug
-        menu_bug = QtGui.QAction(QtGui.QIcon.fromTheme("help-faq"),
-            'Report a Problem | Reportar un Problema', self)
+        menu_bug = QAction(QIcon.fromTheme("help-faq"),
+            'Report a Problem | Reportar un Problema ', self)
         # set the status tip for this menu item
         menu_bug.setStatusTip('Report a Problem...')
         # set the triggered signal to lambda for reporting problems
-        self.connect(menu_bug, QtCore.SIGNAL('triggered()'),
-            lambda: os.system('xdg-open mailto:juancarlospaco@ubuntu.com'))
+        menu_bug.triggered.connect(lambda:
+            call('xdg-open mailto:juancarlospaco@ubuntu.com', shell=True))
 
         # about self
-        menu_self = QtGui.QAction(QtGui.QIcon.fromTheme("help-contents"),
-            'About | Acerca de', self)
+        menu_self = QAction(QIcon.fromTheme("help-contents"), 'About', self)
         # set the status tip for this menu item
         menu_self.setStatusTip('About self...')
         # set the triggered signal to lambda qmessagebox for the about __doc__
-        self.connect(menu_self, QtCore.SIGNAL('triggered()'),
-            lambda: QMessageBox.about(self, __doc__, unicode(__doc__ +
-            ',\nversion ' + __version__ + ' (' + __license__ + '),\n by ' +
-            __author__ + ', ( ' + __email__ + ' ). \n\n ')))
+        menu_self.triggered.connect(lambda: QMessageBox.about(self, __doc__,
+            ''.join((__doc__, ', version ', __version__, ' ( ', __license__,
+            ' ), by ', __author__, ', ( ', __email__, ' ). '))))
 
         # about Qt
-        menu_qt = QtGui.QAction(QtGui.QIcon.fromTheme("help-contents"),
-            'About Qt | Acerca de Qt', self)
+        menu_qt = QAction(QIcon.fromTheme("help-contents"), 'About Qt', self)
         # set the status tip for this menu item
         menu_qt.setStatusTip('About Qt...')
         # set the triggered signal to lambda for the about qt built-in gui
-        self.connect(menu_qt, QtCore.SIGNAL('triggered()'),
-            lambda: QMessageBox.aboutQt(self))
+        menu_qt.triggered.connect(lambda: QMessageBox.aboutQt(self))
 
         # about python
-        menu_py = QtGui.QAction(QtGui.QIcon.fromTheme("help-contents"),
+        menu_py = QAction(QIcon.fromTheme("help-contents"),
             'About Python | Acerca de Python', self)
         # set the status tip for this menu item
         menu_py.setStatusTip('About Python...')
         # set the triggered signal to lambda for online about python
-        self.connect(menu_py, QtCore.SIGNAL('triggered()'),
-            lambda: webbrowser.open_new_tab('http://www.python.org/about'))
+        menu_py.triggered.connect(lambda: open_new_tab('http://python.org/about'))
 
         # about pyalsa
-        menu_pa = QtGui.QAction(QtGui.QIcon.fromTheme("help-contents"),
+        menu_pa = QAction(QIcon.fromTheme("help-contents"),
             'About PyAlsa | Acerca de PyAlsa', self)
         # set the status tip for this menu item
         menu_pa.setStatusTip('About PyAlsa...')
         # set the triggered signal to lambda for online about python
-        self.connect(menu_pa, QtCore.SIGNAL('triggered()'),
-            lambda: webbrowser.open_new_tab(
-            'http://pyalsaaudio.sourceforge.net/libalsaaudio.html'))
+        menu_pa.triggered.connect(lambda:
+          open_new_tab('http://pyalsaaudio.sourceforge.net/libalsaaudio.html'))
 
         # define the menu
         menu = self.menuBar()
@@ -780,56 +803,56 @@ class MyMainWindow(QMainWindow):
         # set the default spacing
         self.layout().setSpacing(1)
 
-        self.lcdNumber = QtGui.QLCDNumber(self)
-        self.lcdNumber.setGeometry(QtCore.QRect(525, 20, 80, 25))
-        self.lcdNumber.setFrameShape(QtGui.QFrame.StyledPanel)
+        self.lcdNumber = QLCDNumber(self)
+        self.lcdNumber.setGeometry(QRect(525, 20, 80, 25))
+        self.lcdNumber.setFrameShape(QFrame.StyledPanel)
         self.lcdNumber.setLineWidth(2)
         self.lcdNumber.setSmallDecimalPoint(True)
         self.lcdNumber.setNumDigits(4)
-        self.lcdNumber.setSegmentStyle(QtGui.QLCDNumber.Flat)
+        self.lcdNumber.setSegmentStyle(QLCDNumber.Flat)
         self.lcdNumber.setProperty("value", 666.0)
         self.lcdNumber.setToolTip('VUmeter LCD Display')
         self.lcdNumber.setObjectName("lcdNumber")
         layout.addWidget(self.lcdNumber)
 
-        self.lcdNumber_2 = QtGui.QLCDNumber(self)
-        self.lcdNumber_2.setGeometry(QtCore.QRect(525, 50, 80, 25))
-        self.lcdNumber_2.setFrameShape(QtGui.QFrame.StyledPanel)
-        self.lcdNumber_2.setFrameShadow(QtGui.QFrame.Raised)
+        self.lcdNumber_2 = QLCDNumber(self)
+        self.lcdNumber_2.setGeometry(QRect(525, 50, 80, 25))
+        self.lcdNumber_2.setFrameShape(QFrame.StyledPanel)
+        self.lcdNumber_2.setFrameShadow(QFrame.Raised)
         self.lcdNumber_2.setLineWidth(2)
         self.lcdNumber_2.setSmallDecimalPoint(True)
         self.lcdNumber_2.setNumDigits(4)
-        self.lcdNumber_2.setSegmentStyle(QtGui.QLCDNumber.Flat)
+        self.lcdNumber_2.setSegmentStyle(QLCDNumber.Flat)
         self.lcdNumber_2.setProperty("value", 666.0)
         self.lcdNumber_2.setToolTip('VUmeter LCD Display')
         self.lcdNumber_2.setObjectName("lcdNumber_2")
         layout.addWidget(self.lcdNumber_2)
 
-        self.progressBar = QtGui.QProgressBar(self)
-        self.progressBar.setGeometry(QtCore.QRect(20, 20, 500, 20))
+        self.progressBar = QProgressBar(self)
+        self.progressBar.setGeometry(QRect(20, 20, 500, 20))
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(5000)
         self.progressBar.setProperty("value", 2500)
         self.progressBar.setInvertedAppearance(False)
-        self.progressBar.setTextDirection(QtGui.QProgressBar.TopToBottom)
+        self.progressBar.setTextDirection(QProgressBar.TopToBottom)
         self.progressBar.setToolTip('VUmeter')
         self.progressBar.setObjectName("progressBar")
         layout.addWidget(self.progressBar)
 
-        self.progressBar_2 = QtGui.QProgressBar(self)
-        self.progressBar_2.setGeometry(QtCore.QRect(20, 50, 500, 20))
+        self.progressBar_2 = QProgressBar(self)
+        self.progressBar_2.setGeometry(QRect(20, 50, 500, 20))
         self.progressBar_2.setMinimum(0)
         self.progressBar_2.setMaximum(5000)
         self.progressBar_2.setProperty("value", 2500)
         self.progressBar_2.setInvertedAppearance(False)
-        self.progressBar_2.setTextDirection(QtGui.QProgressBar.TopToBottom)
+        self.progressBar_2.setTextDirection(QProgressBar.TopToBottom)
         self.progressBar_2.setToolTip('VUmeter')
         self.progressBar_2.setObjectName("progressBar_2")
         layout.addWidget(self.progressBar_2)
 
-        self.dial = QtGui.QDial(self)
-        self.dial.setGeometry(QtCore.QRect(530, 75, 75, 75))
-        self.dial.setCursor(QtGui.QCursor(QtCore.Qt.ClosedHandCursor))
+        self.dial = QDial(self)
+        self.dial.setGeometry(QRect(530, 75, 75, 75))
+        self.dial.setCursor(QCursor(Qt.ClosedHandCursor))
         self.dial.setMinimum(0)
         self.dial.setMaximum(9)
         self.dial.setProperty("value", 0)
@@ -839,85 +862,78 @@ class MyMainWindow(QMainWindow):
         self.dial.setObjectName("dial")
         layout.addWidget(self.dial)
 
-        clock = QtGui.QLCDNumber(self)
+        clock = QLCDNumber(self)
         clock.setNumDigits(25)
-        timer = QtCore.QTimer(self)
+        timer = QTimer(self)
         timer.timeout.connect(lambda: clock.display(
-            datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S %p"))
-            )
+            datetime.now().strftime("%d-%m-%Y %H:%M:%S %p")))
         timer.start(1000)
         clock.setObjectName("clock")
-        clock.setGeometry(QtCore.QRect(20, 80, 500, 50))
-        clock.setToolTip(datetime.datetime.now().strftime("%c %x"))
-        clock.setCursor(QtGui.QCursor(QtCore.Qt.CrossCursor))
+        clock.setGeometry(QRect(20, 80, 500, 50))
+        clock.setToolTip(datetime.now().strftime("%c %x"))
+        clock.setCursor(QCursor(Qt.CrossCursor))
         layout.addWidget(clock)
 
-        self.label1 = QtGui.QLabel(self)
+        self.label1 = QLabel(self)
         self.label1.setText('     Buffer Kb                 KBps                          Mode                          Sample                          Recording     ')
-        self.label1.setGeometry(QtCore.QRect(20, 150, 600, 25))
+        self.label1.setGeometry(QRect(20, 150, 600, 25))
         self.label1.setObjectName("label")
         layout.addWidget(self.label1)
 
         self.combo1 = QComboBox(self)
         self.combo1.setGeometry(20, 175, 100, 25)
-        self.combo1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo1.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo1.setToolTip('Real Time Buffer Data Chunk')
         self.combo1.addItems(['1024', '512', '256', '128'])
         layout.addWidget(self.combo1)
 
         self.combo2 = QComboBox(self)
         self.combo2.setGeometry(145, 175, 100, 25)
-        self.combo2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo2.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo2.setToolTip('Sound KBps')
-        self.combo2.addItems(
-            ['128', '256', '512', '1024', '64', '32', '16', '8']
-            )
+        self.combo2.addItems(['128', '256', '512', '1024', '64', '32', '16'])
         layout.addWidget(self.combo2)
 
         self.combo3 = QComboBox(self)
         self.combo3.setGeometry(265, 175, 100, 25)
-        self.combo3.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo3.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo3.setToolTip('Sound Channels')
         self.combo3.addItems(['MONO', 'STEREO', 'Surround'])
         layout.addWidget(self.combo3)
 
         self.combo4 = QComboBox(self)
         self.combo4.setGeometry(395, 175, 100, 25)
-        self.combo4.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo4.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo4.setToolTip('Sound Sample Rate')
-        self.combo4.addItems(
-            ['44100', '96000', '48000', '32000',
-            '22050', '16000', '11025', '8000']
-            )
+        self.combo4.addItems(['44100', '96000', '48000', '32000',
+                              '22050', '16000', '11025', '8000'])
         layout.addWidget(self.combo4)
 
         self.combo5 = QComboBox(self)
         self.combo5.setGeometry(520, 175, 100, 25)
-        self.combo5.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo5.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo5.setToolTip('Sound Detection for Recording')
         self.combo5.addItems(['SMART', 'FORCE'])
         layout.addWidget(self.combo5)
 
-        self.label2 = QtGui.QLabel(self)
+        self.label2 = QLabel(self)
         self.label2.setText(' 30 Min                                         60 Min                                             90 Min                                  120 Min ')
-        self.label2.setGeometry(QtCore.QRect(20, 225, 600, 25))
-        self.label2.setCursor(QtGui.QCursor(QtCore.Qt.OpenHandCursor))
+        self.label2.setGeometry(QRect(20, 225, 600, 25))
+        self.label2.setCursor(QCursor(Qt.OpenHandCursor))
         self.label2.setToolTip('MINUTES of recording')
         self.label2.setObjectName("label2")
         layout.addWidget(self.label2)
 
-        self.horizontalSlider = QtGui.QSlider(self)
-        self.horizontalSlider.setGeometry(QtCore.QRect(20, 250, 600, 25))
-        self.horizontalSlider.setCursor(
-            QtGui.QCursor(QtCore.Qt.ClosedHandCursor)
-            )
+        self.horizontalSlider = QSlider(self)
+        self.horizontalSlider.setGeometry(QRect(20, 250, 600, 25))
+        self.horizontalSlider.setCursor(QCursor(Qt.ClosedHandCursor))
         self.horizontalSlider.setMinimum(30)
         self.horizontalSlider.setMaximum(120)
         self.horizontalSlider.setProperty("value", 30)
-        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
+        self.horizontalSlider.setOrientation(Qt.Horizontal)
         self.horizontalSlider.setInvertedAppearance(False)
         self.horizontalSlider.setInvertedControls(False)
-        self.horizontalSlider.setTickPosition(QtGui.QSlider.TicksBothSides)
+        self.horizontalSlider.setTickPosition(QSlider.TicksBothSides)
         self.horizontalSlider.setTickInterval(30)
         self.horizontalSlider.setSingleStep(30)
         self.horizontalSlider.setPageStep(30)
@@ -925,36 +941,34 @@ class MyMainWindow(QMainWindow):
         self.horizontalSlider.setObjectName("horizontalSlider")
         layout.addWidget(self.horizontalSlider)
 
-        self.label3 = QtGui.QLabel(self)
-        s = unicode(alsaaudio.cards()).lower().replace("u'", " ")
-        s = ''.join(ch for ch in s if ch not in set(string.punctuation))
-        self.label3.setText(' Cards: ' + s)
-        self.label3.setGeometry(QtCore.QRect(20, 300, 600, 25))
+        self.label3 = QLabel(self)
+        self.label3.setText(' <b> Cards: </b> ' + ''.join(a
+          for a in str(alsaaudio.cards()).lower() if a not in set(punctuation)))
+        self.label3.setGeometry(QRect(20, 300, 600, 25))
         self.label3.setToolTip('Sound Hardware')
         self.label3.setObjectName("label3")
         layout.addWidget(self.label3)
 
-        self.label4 = QtGui.QLabel(self)
-        a = unicode(alsaaudio.mixers()).lower().replace("u'", " ")
-        a = ''.join(ch for ch in a if ch not in set(string.punctuation))
-        self.label4.setText(' Mixers: ' + a)
-        self.label4.setGeometry(QtCore.QRect(20, 325, 600, 25))
+        self.label4 = QLabel(self)
+        self.label4.setText(' <b> Mixers: </b> ' + ''.join(a
+                for a in str(alsaaudio.mixers()) if a not in set(punctuation)))
+        self.label4.setGeometry(QRect(20, 325, 600, 25))
         self.label4.setToolTip('Sound Hardware')
         self.label4.setObjectName("label4")
         layout.addWidget(self.label4)
 
-        print(' INFO: Using Cards ' + unicode(alsaaudio.cards()).lower())
-        print(' INFO: Using Mixers ' + unicode(alsaaudio.mixers()).lower())
+        print((' INFO: Using Cards ' + str(alsaaudio.cards()).lower()))
+        print((' INFO: Using Mixers ' + str(alsaaudio.mixers()).lower()))
 
-        self.label0 = QtGui.QLabel(self)
-        self.label0.setText(' Advanced Input Capturing Codec selection')
-        self.label0.setGeometry(QtCore.QRect(20, 375, 600, 25))
+        self.label0 = QLabel(self)
+        self.label0.setText(' Advanced Input Capturing Codec selection ')
+        self.label0.setGeometry(QRect(20, 375, 600, 25))
         self.label0.setObjectName("label0")
         layout.addWidget(self.label0)
 
         self.combo0 = QComboBox(self)
         self.combo0.setGeometry(20, 400, 600, 25)
-        self.combo0.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.combo0.setCursor(QCursor(Qt.PointingHandCursor))
         self.combo0.setToolTip('Recording Codec')
         self.combo0.addItems([
           'PCM_FORMAT_S32_LE Signed 32bit sample per channel Little Endian',
@@ -983,131 +997,85 @@ class MyMainWindow(QMainWindow):
           ])
         layout.addWidget(self.combo0)
 
-        self.label5 = QtGui.QLabel(self)
+        self.label5 = QLabel(self)
         self.label5.setText(' Disk Space')
-        self.label5.setGeometry(QtCore.QRect(20, 450, 600, 25))
+        self.label5.setGeometry(QRect(20, 450, 600, 25))
         self.label5.setObjectName("label5")
         layout.addWidget(self.label5)
 
-        self.diskBar = QtGui.QProgressBar(self)
-        self.diskBar.setGeometry(QtCore.QRect(20, 475, 600, 25))
+        self.diskBar = QProgressBar(self)
+        self.diskBar.setGeometry(QRect(20, 475, 600, 25))
         self.diskBar.setMinimum(0)
-        self.diskBar.setMaximum(
-            os.statvfs(homedir).f_blocks * os.statvfs(homedir).f_frsize
-            / 1024 / 1024 / 1024)
-        self.diskBar.setProperty("value",
-            os.statvfs(homedir).f_bfree * os.statvfs(homedir).f_frsize
-            / 1024 / 1024 / 1024)
+        self.diskBar.setMaximum(statvfs(homedir).f_blocks *
+            statvfs(homedir).f_frsize / 1024 / 1024 / 1024)
+        self.diskBar.setProperty("value", statvfs(homedir).f_bfree *
+            statvfs(homedir).f_frsize / 1024 / 1024 / 1024)
         self.diskBar.setInvertedAppearance(False)
-        self.diskBar.setTextDirection(QtGui.QProgressBar.TopToBottom)
-        self.diskBar.setToolTip(
-            str(os.statvfs(homedir).f_bfree * os.statvfs(homedir).f_frsize
-            / 1024 / 1024 / 1024) + ' Gigabytes free')
+        self.diskBar.setTextDirection(QProgressBar.TopToBottom)
+        self.diskBar.setToolTip(str(statvfs(homedir).f_bfree *
+            statvfs(homedir).f_frsize / 1024 / 1024 / 1024) + ' Gigabytes free')
         self.diskBar.setObjectName("diskBar")
         layout.addWidget(self.diskBar)
 
-        self.label6 = QtGui.QLabel(self)
-        self.label6.setText(' Off-line Output Recording Codec: ' +
-                            commands.getoutput('oggenc --version'))
-        self.label6.setGeometry(QtCore.QRect(20, 525, 600, 25))
+        self.label6 = QLabel(self)
+        self.label6.setText(' <b> Off-line Output Recording Codec: </b> ' +
+                        str(getoutput('oggenc --version', shell=True)).strip())
+        self.label6.setGeometry(QRect(20, 525, 600, 25))
         self.label6.setObjectName("label6")
         layout.addWidget(self.label6)
 
-        self.label6 = QtGui.QLabel(self)
-        self.label6.setGeometry(QtCore.QRect(625, 25, 300, 400))
-        self.label6.setObjectName("label6")
-        self.label6.setFont(QtGui.QFont('Ubuntu Light', 8))
-        layout.addWidget(self.label6)
-        try:
-            print(' INFO: Loading Actual Weather Conditions info . . . ')
-            page = ''.join(ch
-                for ch in urllib2.urlopen(
-                'http://m.wund.com/global/stations/87582.html'
-                ).read().strip().splitlines()[10:83] if ch not in set(
-                string.punctuation)
-                )
-            self.label6.setText(page)
-            # print(page)
-            print(' INFO: Loading Future Weather Pronostic info . . . ')
-            page2 = ''.join(ch
-                for ch in urllib2.urlopen(
-                'http://m.wund.com/global/stations/87582.html'
-                ).read().strip().splitlines()[95:272] if ch not in set(
-                string.punctuation)
-                )
-            self.label6.setToolTip(page2)
-            # print(page2)
-            QtCore.QObject.connect(QPushButton(self.label6),
-                QtCore.SIGNAL("clicked()"),
-                lambda: webbrowser.open_new_tab(
-                    'http://www.wunderground.com/global/stations/87582.html')
-                )
-        except:
-            self.label6.setText(' ERROR: Weather Error: epic fail !!! ')
-            self.label6.setToolTip(' ERROR: Weather Error: epic fail !!! ')
-            print(' ERROR: Weather Error: epic fail !!! ')
-
-        self.button1 = QtGui.QPushButton(self)
-        self.button1.setGeometry(QtCore.QRect(625, 450, 300, 25))
+        self.button1 = QPushButton(self)
+        self.button1.setGeometry(QRect(25, 575, 100, 25))
         self.button1.setText(' Files ')
         self.button1.setObjectName("button1")
-        QtCore.QObject.connect(self.button1, QtCore.SIGNAL("clicked()"),
-            lambda: os.system('xdg-open ' + os.getcwd()))
+        self.button1.clicked.connect(lambda:
+                                     call('xdg-open ' + getcwd(), shell=True))
         layout.addWidget(self.button1)
 
-        self.button2 = QtGui.QPushButton(self)
-        self.button2.setGeometry(QtCore.QRect(625, 475, 300, 25))
-        self.button2.setText(' Donate $5')
-        self.button2.setToolTip(' Donate $5 !, No credit card required !')
+        self.button2 = QPushButton(self)
+        self.button2.setGeometry(QRect(150, 575, 100, 25))
+        self.button2.setText(' Donate ')
+        self.button2.setToolTip(' Donate $5 !, No credit card required ! ')
         self.button2.setObjectName("button2")
-        QtCore.QObject.connect(self.button2, QtCore.SIGNAL("clicked()"),
-            lambda: webbrowser.open_new_tab('http://goo.gl/cB7PR'))
+        self.button2.clicked.connect(lambda:
+                                     open_new_tab('http://goo.gl/cB7PR'))
         layout.addWidget(self.button2)
 
-        self.button3 = QtGui.QPushButton(self)
-        self.button3.setGeometry(QtCore.QRect(625, 500, 300, 25))
-        self.button3.setText(' Sound Editor ')
+        self.button3 = QPushButton(self)
+        self.button3.setGeometry(QRect(525, 575, 100, 25))
+        self.button3.setText(' Compress OGG ')
         self.button3.setObjectName("button3")
-        QtCore.QObject.connect(self.button3, QtCore.SIGNAL("clicked()"),
-            lambda: os.system('audacity'))
+        self.button3.clicked.connect(self.convertOGG)
         layout.addWidget(self.button3)
 
-        self.labelc = QtGui.QLabel(self)
-        self.labelc.setText(__email__)
-        self.labelc.setToolTip(
-            __doc__ + ',v.' + __version__ + '(' + __license__ + '),by ' +
-            __author__
-            )
-        self.labelc.setGeometry(QtCore.QRect(625, 525, 300, 25))
-        self.labelc.setObjectName("labelc")
-        layout.addWidget(self.labelc)
+        self.button4 = QPushButton(self)
+        self.button4.setGeometry(QRect(400, 575, 100, 25))
+        self.button4.setText(' Screenshot ')
+        self.button4.setObjectName("button4")
+        self.button4.clicked.connect(lambda: QPixmap.grabWindow(
+            QApplication.desktop().winId()).save(QFileDialog.getSaveFileName(
+            self, " Save Screenshot As ... ", getcwd(), ';;(*.png)', 'png')))
+
+        self.button5 = QPushButton(self)
+        self.button5.setGeometry(QRect(275, 575, 100, 25))
+        self.button5.setText(' OGG --> ZIP ')
+        self.button5.setObjectName("button4")
+        self.button5.clicked.connect(lambda: make_archive(
+            str(QFileDialog.getSaveFileName(self, "Save OGG to ZIP file As...",
+            getcwd(), ';;(*.zip)', 'zip')).replace('.zip', ''), "zip",
+            path.abspath(path.join(getcwd(), str(datetime.now().year)))))
 
         # Bottom Buttons Bar
-        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox = QDialogButtonBox(self)
         # set the geometry of buttonbox
-        self.buttonBox.setGeometry(QtCore.QRect(25, 575, 900, 32))
+        self.buttonBox.setGeometry(QRect(25, 625, 600, 32))
         # set the orientation, can be horizontal or vertical
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setOrientation(Qt.Horizontal)
         # define the buttons to use on it, std buttons uncomment to use
-        self.buttonBox.setStandardButtons(
-            QtGui.QDialogButtonBox.Ok |
-            #QtGui.QDialogButtonBox.Open |
-            #QtGui.QDialogButtonBox.Save |
-            QtGui.QDialogButtonBox.Cancel |
-            QtGui.QDialogButtonBox.Close |
-            #QtGui.QDialogButtonBox.Discard |
-            #QtGui.QDialogButtonBox.Apply |
-            QtGui.QDialogButtonBox.Reset |
-            #QtGui.QDialogButtonBox.RestoreDefaults |
-            QtGui.QDialogButtonBox.Help |
-            #QtGui.QDialogButtonBox.SaveAll |
-            #QtGui.QDialogButtonBox.Yes |
-            #QtGui.QDialogButtonBox.YesToAll |
-            #QtGui.QDialogButtonBox.No |
-            #QtGui.QDialogButtonBox.NoToAll |
-            QtGui.QDialogButtonBox.Abort |
-            QtGui.QDialogButtonBox.Retry)
-            #QtGui.QDialogButtonBox.Ignore)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok |
+            QDialogButtonBox.Cancel | QDialogButtonBox.Close |
+            QDialogButtonBox.Reset | QDialogButtonBox.Help |
+            QDialogButtonBox.Abort | QDialogButtonBox.Retry)
         # set if buttons are centered or not
         self.buttonBox.setCenterButtons(False)
         # give the object a name
@@ -1115,19 +1083,13 @@ class MyMainWindow(QMainWindow):
         # add it to the layout
         layout.addWidget(self.buttonBox)
         # Help Button Action connection helpRequested() to a QMessageBox
-        QtCore.QObject.connect(self.buttonBox,
-            QtCore.SIGNAL("helpRequested()"),
-            lambda: QMessageBox.about(self, __doc__, unicode(__doc__ +
-            ',\nversion ' + __version__ + ' (' + __license__ + '),\nby ' +
-            __author__ + ', ( ' + __email__ + ' ). \n\n')))
+        self.buttonBox.helpRequested.connect(lambda: QMessageBox.about(self,
+            __doc__, ''.join((__doc__, linesep, 'version ', __version__, ' (',
+            __license__, '), by ', __author__, ', ( ', __email__, ' ). \n'))))
         # Help Button Action connection to a quit() slot
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"),
-            QtGui.qApp, QtCore.SLOT('quit()'))
+        self.buttonBox.rejected.connect(self.close)
         # Help Button Action connection to a accepted() slot
-
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"),
-            self.run)
-
+        self.buttonBox.accepted.connect(self.run)
         # Paleta de colores para pintar transparente
         palette = self.palette()
         # add a transparent to the brush of palette
@@ -1136,60 +1098,57 @@ class MyMainWindow(QMainWindow):
         self.setPalette(palette)
         # set the opaque paint to false
         self.setAttribute(Qt.WA_OpaquePaintEvent, False)
-        self.center()
+        # self.convertOGG()
 
     def run(self):  # FIXME threading ???
         ' run the recording functionality '
 
-        print(' INFO: Started Recording at ' + str(datetime.datetime.now()))
+        print((' INFO: Started Recording at ' + str(datetime.now())))
         inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE)
         # Parse the options
 
         # stereo, mono
-        if self.combo3.currentText() == 'MONO':
-            channels = 1
-            inp.setchannels(channels)
+        if self.combo3.currentText() is 'MONO':
+            inp.setchannels(1)
             print(' INFO: Using Mono, 1 Channel . . . ')
-        elif self.combo3.currentText() == 'STEREO':
-            channels = 2
-            inp.setchannels(channels)
+        elif self.combo3.currentText() is 'STEREO':
+            inp.setchannels(2)
             print(' INFO: Using Stereo, 2 Channels . . . ')
-        elif self.combo3.currentText() == 'Surround':
-            channels = 6
-            inp.setchannels(channels)
+        elif self.combo3.currentText() is 'Surround':
+            inp.setchannels(6)
             print(' INFO: Using 3D Surround, 6 Channels . . . ')
-            print(' WARNING: 6 Channels 3D Surround is EXPERIMENTAL !!!\n' * 9)
+            print((' WARNING: 6 Channels 3D Surround is EXPERIMENTAL!!\n' * 9))
 
         # '44100', '96000', '48000', '32000', '22050', '16000', '11025', '8000'
-        if self.combo4.currentText() == '44100':
+        if self.combo4.currentText() is '44100':
             bitrate = 44100
             inp.setrate(bitrate)
             print(' INFO: Using 44100 Hz per Second . . . ')
-        elif self.combo4.currentText() == '96000':
+        elif self.combo4.currentText() is '96000':
             bitrate = 96000
             inp.setrate(bitrate)
             print(' INFO: Using 96000 Hz per Second . . . ')
-        elif self.combo4.currentText() == '48000':
+        elif self.combo4.currentText() is '48000':
             bitrate = 48000
             inp.setrate(bitrate)
             print(' INFO: Using 48000 Hz per Second . . . ')
-        elif self.combo4.currentText() == '32000':
+        elif self.combo4.currentText() is '32000':
             bitrate = 32000
             inp.setrate(bitrate)
             print(' INFO: Using 32000 Hz per Second . . . ')
-        elif self.combo4.currentText() == '22050':
+        elif self.combo4.currentText() is '22050':
             bitrate = 22050
             inp.setrate(bitrate)
             print(' INFO: Using 22050 Hz per Second . . . ')
-        elif self.combo4.currentText() == '16000':
+        elif self.combo4.currentText() is '16000':
             bitrate = 16000
             inp.setrate(bitrate)
             print(' INFO: Using 16000 Hz per Second . . . ')
-        elif self.combo4.currentText() == '11025':
+        elif self.combo4.currentText() is '11025':
             bitrate = 11025
             inp.setrate(bitrate)
             print(' INFO: Using 11025 Hz per Second . . . ')
-        elif self.combo4.currentText() == '8000':
+        elif self.combo4.currentText() is '8000':
             bitrate = 8000
             inp.setrate(bitrate)
             print(' INFO: Using 8000 Hz per Second . . . ')
@@ -1322,71 +1281,38 @@ class MyMainWindow(QMainWindow):
         # threshold value
         try:
             THRESHOLD = self.dial.value() * 100
-            print(' INFO: Using Thresold of ' + str(THRESHOLD) + ' . . . ')
+            print((' INFO: Using Thresold of ' + str(THRESHOLD) + ' . . . '))
         except:
             THRESHOLD = 0
-            print(' INFO: Using FALLBACK Thresold ' + str(THRESHOLD) + '. . .')
+            print((' INFO: Using FALLBACK Thresold ' + str(THRESHOLD) + '...'))
 
         # recording time
         try:
             RECORD_SECONDS = self.horizontalSlider.value() * 60  # * 60
-            print(' INFO: Using Recording time of ' + str(RECORD_SECONDS))
+            print((' INFO: Using Recording time of ' + str(RECORD_SECONDS)))
         except:
             RECORD_SECONDS = 1800
-            print(' INFO: Using FALLBACK Recording time' + str(RECORD_SECONDS))
+            print((' INFO: FALLBACK Recording time' + str(RECORD_SECONDS)))
 
-        # make base directory
-        base = os.getcwd() + '/' + unicode(datetime.datetime.now().year) + '/'
-        try:
-            os.mkdir(base)
-            print(' INFO: Base Directory path created ' + base)
-        except OSError:
-            print(' INFO: Base Directory path already exist ' + base)
-        except:
-            print(' ERROR: Can not create Base Directory ?, ' + base)
-
-        # make directory tree
-        try:
-            for dir in range(1, 13):
-                os.mkdir(base + str(dir))
-                print(' INFO: Directory Tree created ' + base + str(dir))
-        except OSError:
-            print(' INFO: Directory Tree paths already exist ' + base + '1,12')
-        except:
-            print(' ERROR: Can not create Directory Tree ?, ' + base + '1, 12')
-
-        # convert RAW .PCM to compressed .OGG files
-        print(' INFO: Compressing sound into .OGG files . . . ')
-        try:
-            for dir in range(1, 13):
-                os.system('oggenc -r --downmix ' + base + str(dir) + '/*.pcm')
-                print(' INFO: Compressed .OGG files created at ' + str(dir))
-            # remove uncompressed files
-            print(' INFO: Deleting uncompressed sound files . . . ')
-            for dir in range(1, 13):
-                os.system('rm --verbose --force ' + base + str(dir) + '/*.pcm')
-                print(' INFO: Deleted uncompressed files on ' + str(dir))
-        except:
-            print(' ERROR: Cant Convert .PCM to .OGG files?, ' + base + '1,12')
-            print(' ERROR: oggenc not found installed ??? ')
-            print(' ( sudo apt-get install vorbis-tools ) ')
+        base = path.join(getcwd(), str(datetime.now().year))
+        self.convertOGG()
 
         # recording loop
         while True:
-            filename = str(base + str(datetime.datetime.now().month) + '/' +
-                datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + '.pcm')
-            print(' INFO: Recording on the file ' + filename)
+            filename = path.abspath(path.join(base, str(datetime.now().month),
+                       datetime.now().strftime("%Y-%m-%d_%H:%M:%S.pcm")))
+            print((' INFO: Recording on the file ' + filename))
             f = open(filename, 'wb')
-            print('-' * 80)
-            print(' INFO: Loop Range ' + str(bitrate / 1024 * RECORD_SECONDS))
+            print(('-' * 80))
+            print((' INFO: Loop Range ' + str(bitrate / 1024 * RECORD_SECONDS)))
             print(' Logic Tick, Data Chunk, VUmeter ')
-            for i in xrange(0, bitrate / 512 * RECORD_SECONDS):
+            for i in range(0, bitrate / 512 * RECORD_SECONDS):
                 l, data = inp.read()
                 b = numpy.fromstring(data, dtype='int32')
                 a = int(numpy.abs(b).mean().astype(numpy.int32) * 0.00001)
 
                 # Feedback to the GUI and CLI
-                print(i, l, a)
+                print((i, l, a))
                 self.progressBar.setValue(a)
                 self.progressBar_2.setValue(a)
                 self.lcdNumber.display(a)
@@ -1400,47 +1326,95 @@ class MyMainWindow(QMainWindow):
                     f.write(data)
             f.close()
 
+    def convertOGG(self):
+        ' convert to ogg files '
+        # make base directory
+        base = path.join(getcwd(), str(datetime.now().year))
+        try:
+            mkdir(base)
+            print((' INFO: Base Directory path created ' + base))
+        except OSError:
+            print((' INFO: Base Directory path already exist ' + base))
+        except:
+            print((' ERROR: Can not create Base Directory ?, ' + base))
+        # make directory tree
+        try:
+            for dr in range(1, 13):
+                mkdir(path.abspath(path.join(base, str(dr))))
+                print((' INFO: Directory Tree created ', base, str(dr)))
+        except OSError:
+            print((' INFO: Directory Tree path already exist ' + base + '1,12'))
+        except:
+            print((' ERROR: Can not create Directory Tree?, ' + base + '1, 12'))
+        # convert RAW .PCM to compressed .OGG files
+        print(' INFO: Compressing sound into .OGG files . . . ')
+        try:
+            for dr in range(1, 13):
+                call(''.join(('oggenc -r --downmix ',
+                path.abspath(path.join(base, str(dr), '*.pcm')))), shell=True)
+                print((' INFO: Compressed .OGG files created at ',
+                       path.abspath(path.join(base, str(dr), '*.pcm'))))
+            # remove uncompressed files
+            print(' INFO: Deleting uncompressed sound files . . . ')
+            for dr in range(1, 13):
+                call(''.join(('rm --verbose --force ',
+                path.abspath(path.join(base, str(dr), '*.pcm')))), shell=True)
+                print((' INFO: Deleted uncompressed files on ' + str(dr)))
+        except:
+            print((' ERROR: Cant Convert PCM to OGG files?, ' + base))
+            print(' ERROR: oggenc not found installed ??? ')
+            print(' ( sudo apt-get install vorbis-tools ) ')
+
     def closeEvent(self, event):
         ' Ask to Quit '
-        reply = QtGui.QMessageBox.question(self,
-            'Close | Cerrar', "Salir? | Quit?",
-            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         # if the reply is yes then accept, else ignore the close call
-        if reply == QtGui.QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
-
-    def center(self):
-        ' Center the window '
-        qr = self.frameGeometry()
-        cp = QtGui.QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        event.accept() if QMessageBox.question(self, 'Close | Cerrar',
+            "Salir? | Quit?", QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No) == QMessageBox.Yes else event.ignore()
 
     def paintEvent(self, event):
         ' Paint semi-transparent background '
         QWidget.paintEvent(self, event)
         # make a painter
+        # make a painter
         p = QPainter(self)
-        # fill it to transparent painting
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        p.setRenderHint(QPainter.HighQualityAntialiasing)
+        # fill a rectangle with transparent painting
         p.fillRect(event.rect(), Qt.transparent)
+        # animated random dots background pattern
+        for i in range(4096):
+            x = randint(25, self.size().width() - 25)
+            y = randint(25, self.size().height() - 25)
+            p.setPen(QPen(QColor(randint(9, 255), 255, randint(9, 255)), 1))
+            p.drawPoint(x, y)
+        # set pen to use white color
+        p.setPen(QPen(QColor(randint(9, 255), 255, randint(9, 255)), 1))
+        # Rotate painter 45 Degree
+        p.rotate(45)
+        # Set painter Font for text
+        p.setFont(QFont('Ubuntu', 200))
+        # draw the background text, with antialiasing
+        p.drawText(99, 99, "Radio")
+        # Rotate -45 the QPen back !
+        p.rotate(-45)
         # set the pen to no pen
         p.setPen(Qt.NoPen)
-         # Background Color
+        # Background Color
         p.setBrush(QColor(0, 0, 0))
         # Background Opacity
-        p.setOpacity(0.5)
+        p.setOpacity(0.75)
         # Background Rounded Borders
-        p.drawRoundedRect(self.rect(), 50, 50)
+        p.drawRoundedRect(self.rect(), 100, 50)
         # finalize the painter
         p.end()
 
     def showQColorDialog(self):
         ' Choose a Color for Qt '
-        color = QtGui.QColorDialog.getColor()
+        color = QColorDialog.getColor()
         # print info
-        print(' INFO: Using User requested color ' + str(color.name()) + '...')
+        print((' INFO: Using User requested color ' + str(color.name())))
         # if the color is a valid color use it into an CSS and apply it
         if color.isValid():
             self.setStyleSheet(" * { background-color: %s } " % color.name())
@@ -1448,25 +1422,20 @@ class MyMainWindow(QMainWindow):
     def seTitle(self):
         ' set the title of the main window '
         # make a dialog gui
-        dialog = QtGui.QDialog(self)
+        dialog = QDialog(self)
         #
-        label1 = QtGui.QLabel('Title: ', dialog)
-        label1.setAutoFillBackground(True)
-        textEditInput = QtGui.QLineEdit(dialog)
+        textEditInput = QLineEdit(dialog)
         textEditInput.setPlaceholderText(' title ')
         # make a button
-        ok = QtGui.QPushButton(dialog)
+        ok = QPushButton(dialog)
         # set the text on the button to ok
         ok.setText('&O K')
         ok.setDefault(True)
         # connect the clicked signal to an accept slot
-        self.connect(ok, QtCore.SIGNAL('clicked()'),
-            lambda: self.setWindowTitle(textEditInput.text()))
+        ok.clicked.connect(lambda: self.setWindowTitle(textEditInput.text()))
         # make a local layout
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(label1)
-        layout.addWidget(textEditInput)
-        layout.addWidget(ok)
+        layout = QVBoxLayout()
+        [layout.addWidget(a) for a in (QLabel('Title:'), textEditInput, ok)]
         dialog.setLayout(layout)
         # run the dialog
         dialog.exec_()

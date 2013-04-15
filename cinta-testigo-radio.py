@@ -1064,11 +1064,18 @@ class MyMainWindow(QMainWindow):
         self.button5 = QPushButton(self)
         self.button5.setGeometry(QRect(275, 575, 100, 25))
         self.button5.setText(' OGG --> ZIP ')
-        self.button5.setObjectName("button4")
+        self.button5.setObjectName("button5")
         self.button5.clicked.connect(lambda: make_archive(
             str(QFileDialog.getSaveFileName(self, "Save OGG to ZIP file As...",
             getcwd(), ';;(*.zip)', 'zip')).replace('.zip', ''), "zip",
             path.abspath(path.join(getcwd(), str(datetime.now().year)))))
+
+        self.button6 = QPushButton(self)
+        self.button6.setGeometry(QRect(25, 600, 600, 25))
+        self.button6.setText(' Manual de Usuario | User Manual ')
+        self.button6.setToolTip(' Descargar Manual de Usuario ')
+        self.button6.setObjectName("button6")
+        self.button6.clicked.connect(lambda: open_new_tab('http://google.com'))
 
         # Bottom Buttons Bar
         self.buttonBox = QDialogButtonBox(self)

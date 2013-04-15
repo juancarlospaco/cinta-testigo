@@ -32,6 +32,10 @@ from os import statvfs
 from os import getcwd
 from os import mkdir
 from os import path
+from os import remove
+from os import walk
+from itertools import chain
+from itertools import product
 from shutil import make_archive
 from random import randint
 from subprocess import call
@@ -762,7 +766,8 @@ class MyMainWindow(QMainWindow):
         # set the status tip for this menu item
         menu_py.setStatusTip('About Python...')
         # set the triggered signal to lambda for online about python
-        menu_py.triggered.connect(lambda: open_new_tab('http://python.org/about'))
+        menu_py.triggered.connect(lambda:
+                                  open_new_tab('http://python.org/about'))
 
         # about pyalsa
         menu_pa = QAction(QIcon.fromTheme("help-contents"),
@@ -1350,16 +1355,15 @@ class MyMainWindow(QMainWindow):
         print(' INFO: Compressing sound into .OGG files . . . ')
         try:
             for dr in range(1, 13):
-                call(''.join(('oggenc -r --downmix ',
+                print((''.join((' INFO: Executing:  oggenc -r --downmix ',
+                            path.abspath(path.join(base, str(dr), '*.pcm'))))))
+                call(''.join(('nice --adjustment=20 oggenc -r --downmix ',
                 path.abspath(path.join(base, str(dr), '*.pcm')))), shell=True)
                 print((' INFO: Compressed .OGG files created at ',
                        path.abspath(path.join(base, str(dr), '*.pcm'))))
             # remove uncompressed files
             print(' INFO: Deleting uncompressed sound files . . . ')
-            for dr in range(1, 13):
-                call(''.join(('rm --verbose --force ',
-                path.abspath(path.join(base, str(dr), '*.pcm')))), shell=True)
-                print((' INFO: Deleted uncompressed files on ' + str(dr)))
+            [remove(a) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(base)])) if f.endswith(('.pcm', '.PCM')) and not f.startswith('.')])]
         except:
             print((' ERROR: Cant Convert PCM to OGG files?, ' + base))
             print(' ERROR: oggenc not found installed ??? ')

@@ -1307,10 +1307,28 @@ class MyMainWindow(QMainWindow):
             print((' INFO: FALLBACK Recording time' + str(RECORD_SECONDS)))
 
         base = path.join(getcwd(), str(datetime.now().year))
-        self.convertOGG()
+
+        # make base directory
+        try:
+            mkdir(base)
+            print((' INFO: Base Directory path created ' + base))
+        except OSError:
+            print((' INFO: Base Directory path already exist ' + base))
+        except:
+            print((' ERROR: Can not create Base Directory ?, ' + base))
+        # make directory tree
+        try:
+            for dr in range(1, 13):
+                mkdir(path.abspath(path.join(base, str(dr))))
+                print((' INFO: Directory Tree created ', base, str(dr)))
+        except OSError:
+            print((' INFO: Directory Tree path already exist ' + base + '1,12'))
+        except:
+            print((' ERROR: Can not create Directory Tree?, ' + base + '1, 12'))
 
         # recording loop
         while True:
+            self.convertOGG()
             filename = path.abspath(path.join(base, str(datetime.now().month),
                        datetime.now().strftime("%Y-%m-%d_%H:%M:%S.pcm")))
             print((' INFO: Recording on the file ' + filename))
@@ -1318,7 +1336,7 @@ class MyMainWindow(QMainWindow):
             print(('-' * 80))
             print((' INFO: Loop Range ' + str(bitrate / 1024 * RECORD_SECONDS)))
             print(' Logic Tick, Data Chunk, VUmeter ')
-            for i in range(0, bitrate / 512 * RECORD_SECONDS):
+            for i in range(0, bitrate / 1024 * RECORD_SECONDS):
                 l, data = inp.read()
                 b = numpy.fromstring(data, dtype='int32')
                 a = int(numpy.abs(b).mean().astype(numpy.int32) * 0.00001)
@@ -1340,41 +1358,17 @@ class MyMainWindow(QMainWindow):
 
     def convertOGG(self):
         ' convert to ogg files '
-        # make base directory
+        # convert RAW .PCM to compressed .OGG files
         base = path.join(getcwd(), str(datetime.now().year))
         try:
-            mkdir(base)
-            print((' INFO: Base Directory path created ' + base))
-        except OSError:
-            print((' INFO: Base Directory path already exist ' + base))
-        except:
-            print((' ERROR: Can not create Base Directory ?, ' + base))
-        # make directory tree
-        try:
-            for dr in range(1, 13):
-                mkdir(path.abspath(path.join(base, str(dr))))
-                print((' INFO: Directory Tree created ', base, str(dr)))
-        except OSError:
-            print((' INFO: Directory Tree path already exist ' + base + '1,12'))
-        except:
-            print((' ERROR: Can not create Directory Tree?, ' + base + '1, 12'))
-        # convert RAW .PCM to compressed .OGG files
-        print(' INFO: Compressing sound into .OGG files . . . ')
-        try:
-            for dr in range(1, 13):
-                print((''.join((' INFO: Executing:  oggenc -r --downmix ',
-                            path.abspath(path.join(base, str(dr), '*.pcm'))))))
-                call(''.join(('nice --adjustment=20 oggenc -r --downmix ',
-                path.abspath(path.join(base, str(dr), '*.pcm')))), shell=True)
-                print((' INFO: Compressed .OGG files created at ',
-                       path.abspath(path.join(base, str(dr), '*.pcm'))))
-            # remove uncompressed files
+            print(' INFO: Compressing sound into .OGG files . . . ')
+            [call(''.join(('nice --adjustment=20 oggenc -r --downmix ', path.abspath(a))), shell=True) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(base)])) if f.endswith(('.pcm', '.PCM')) and not f.startswith('.')])]
             print(' INFO: Deleting uncompressed sound files . . . ')
             [remove(a) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(base)])) if f.endswith(('.pcm', '.PCM')) and not f.startswith('.')])]
         except:
-            print((' ERROR: Cant Convert PCM to OGG files?, ' + base))
-            print(' ERROR: oggenc not found installed ??? ')
-            print(' ( sudo apt-get install vorbis-tools ) ')
+            print((' ERROR: Cant Convert PCM to OGG files? ', linesep,
+                   ' ERROR: oggenc not found installed ??? ', linesep,
+                   ' ( sudo apt-get install vorbis-tools ) ', linesep))
 
     def closeEvent(self, event):
         ' Ask to Quit '

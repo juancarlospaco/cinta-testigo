@@ -9,11 +9,28 @@ Cinta testigo libre para Radioemisoras basadas en Linux, usando PyQt, graba a .O
 ![screenshot](https://lh5.googleusercontent.com/-edgJkemn0AE/UFJGKW5zeFI/AAAAAAAAB1M/szuxBKUJTds/s882/temp.jpg)
 
 
+![screenshot](https://lh4.googleusercontent.com/-Z9r-fTnSiDE/UaXaxx8EEMI/AAAAAAAADBI/I8OdA-BmGh8/w1291-h690-no/temp.jpg)
+
+
+Required:
+
+sudo apt-get install vorbis-tools python-qt4 python-qt4-phonon python-alsaaudio python-numpy 
+
+
+Optional:
+
+sudo apt-get install python-kde4 shared-desktop-ontologies nepomuk-core
+
+
 
 This is used at http://www.farco.org.ar
 
 This is used at http://aler.org
 
+
+ALER Radio especial program talking about freesoftware and cinta-testigo.py:
+
+http://www.ivoox.com/programa-especial-experiencias-practicas-del-software-libre-audios-mp3_rf_1994588_1.html
 
 Daniel Zas from Community/Coop Radios at www.farco.org.ar :
 

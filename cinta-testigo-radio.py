@@ -585,7 +585,7 @@ class MyMainWindow(QMainWindow):
         try:
             for dr in range(1, 13):
                 mkdir(path.abspath(path.join(self.base, str(dr))))
-                print((' INFO:Directory created {}/{}'.format((self.base, dr))))
+                print((' INFO:Directory created {}/{}'.format(self.base, dr)))
         except OSError:
             print((' INFO: Directory already exist {}/1,12'.format(self.base)))
         except:

@@ -239,7 +239,8 @@ class MyMainWindow(QMainWindow):
                             str(QFontDialog.getFont()[0].toString()), '}'))))
         qasrc = QAction(QIcon.fromTheme("applications-development"),
                         'View Source Code', self)
-        qasrc.triggered.connect(lambda: call('xdg-open {}'.format(__file__), 1))
+        qasrc.triggered.connect(lambda:
+                            call('xdg-open {}'.format(__file__), shell=True))
         qakb = QAction(QIcon.fromTheme("input-keyboard"),
                        'Keyboard Shortcuts', self)
         qakb.triggered.connect(lambda: QMessageBox.information(self.mainwidget,
@@ -264,7 +265,7 @@ class MyMainWindow(QMainWindow):
                                if self.mainwidget.tabBar().isVisible() is True
                                else self.mainwidget.tabBar().show())
         qadoc = QAction(QIcon.fromTheme("help-browser"), 'On-line Docs', self)
-        qadoc.triggered.connect(lambda: open_new_tab(__url__))
+        qadoc.triggered.connect(lambda: open_new_tab(str(__url__).strip()))
         qapy = QAction(QIcon.fromTheme("help-browser"), 'About Python', self)
         qapy.triggered.connect(lambda: open_new_tab('http://python.org/about'))
         qali = QAction(QIcon.fromTheme("help-browser"), 'Read Licence', self)
@@ -646,7 +647,7 @@ class MyMainWindow(QMainWindow):
                 print(' INFO: Semantic User Experience Query files. . . ')
                 self.nepomuk_get('testigo')
             except:
-                print((' ERROR: Cant use Semantic User Experience on file', linesep,
+                print((' ERROR: Cant use Semantic User Experience ', linesep,
                        ' ERROR: Nepomuk not found installed ??? ', linesep,
                        ' ( sudo apt-get install python-kde4 ) ', linesep))
 
@@ -666,7 +667,7 @@ class MyMainWindow(QMainWindow):
         for i in range(4096):
             x = randint(9, self.size().width() - 9)
             y = randint(9, self.size().height() - 9)
-            p.setPen(QPen(QColor(randint(9, 255), randint(9, 255), 255), 1))
+            p.setPen(QPen(QColor(randint(200, 255), randint(200, 255), 255), 1))
             p.drawPoint(x, y)
         # set pen to use white color
         p.setPen(QPen(QColor(randint(9, 255), randint(9, 255), 255), 1))

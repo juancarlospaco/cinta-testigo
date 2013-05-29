@@ -33,13 +33,15 @@ __full_licence__ = 'http://opensource.org/licenses/gpl-3.0.html'
 
 # imports
 import sys
-from os import (path, linesep, geteuid, environ, statvfs)
-
+from os import (path, linesep, geteuid, environ,
+                statvfs, mkdir, getcwd, remove, walk)
 from datetime import datetime
 from subprocess import call
 from random import randint
 from webbrowser import open_new_tab
 from subprocess import check_output as getoutput
+from itertools import (chain, product)
+import wave
 try:
     from urllib.request import urlopen  # py3
 except ImportError:
@@ -60,7 +62,8 @@ try:
     from PyQt4.QtNetwork import (QNetworkProxy, )
     from PyQt4.phonon import Phonon
 except ImportError:
-    print(" ERROR: No Qt4 avaliable! \n ( sudo apt-get install python-qt4 ) ")
+    print(''' ERROR: No Qt4 avaliable !
+          ( sudo apt-get install python-qt4 python-qt4-phonon ) ''')
     exit()
 
 try:
@@ -88,10 +91,10 @@ try:
 except ImportError:
     exit(' ERROR: AlsaAudio not found,(sudo apt-get install python-alsaaudio)')
 
-#try:
-    #import numpy
-#except ImportError:
-    #exit(' ERROR: NumPy not found !, ( sudo apt-get install python-numpy )')
+try:
+    import numpy
+except ImportError:
+    exit(' ERROR: NumPy not found !, ( sudo apt-get install python-numpy )')
 
 
 # API 2
@@ -131,6 +134,8 @@ class MyMainWindow(QMainWindow):
         self.setFont(QFont('Ubuntu Light', 10))
         self.setMaximumSize(QDesktopWidget().screenGeometry().width(),
                             QDesktopWidget().screenGeometry().height())
+
+        self.base = path.abspath(path.join(getcwd(), str(datetime.now().year)))
 
         # directory auto completer
         self.completer = QCompleter(self)
@@ -348,14 +353,14 @@ class MyMainWindow(QMainWindow):
 
         self.progressBar = QProgressBar()
         self.progressBar.setMinimum(0)
-        self.progressBar.setMaximum(5000)
-        self.progressBar.setValue(2500)
+        self.progressBar.setMaximum(200)
+        self.progressBar.setValue(100)
         self.progressBar.setToolTip(' VUmeter ')
 
         self.progressBar2 = QProgressBar(self)
         self.progressBar2.setMinimum(0)
-        self.progressBar2.setMaximum(5000)
-        self.progressBar2.setValue(2500)
+        self.progressBar2.setMaximum(200)
+        self.progressBar2.setValue(100)
         self.progressBar2.setToolTip(' VUmeter ')
 
         self.clock = QLCDNumber()
@@ -378,6 +383,7 @@ class MyMainWindow(QMainWindow):
             statvfs(HOME).f_frsize / 1024 / 1024 / 1024) + ' Gigabytes free')
 
         self.boton = QPushButton(QIcon.fromTheme("media-record"), 'Record')
+        self.boton.clicked.connect(self.run)
 
         vboxg1 = QVBoxLayout(self.group1)
         for each_widget in (QLabel('<b style="color:white;"> VUMeters '),
@@ -506,35 +512,8 @@ class MyMainWindow(QMainWindow):
         self.dial.setWrapping(False)
         self.dial.setNotchesVisible(True)
 
-        self.combo0 = QComboBox()
-        self.combo0.addItems([
-          'PCM_FORMAT_S32_LE Signed 32bit sample per channel Little Endian',
-          'PCM_FORMAT_S8 Signed 8bit samples for each channel',
-          'PCM_FORMAT_U8 Signed 8bit samples for each channel',
-          'PCM_FORMAT_S16_LE Signed 16bit sample per channel Little Endian',
-          'PCM_FORMAT_S16_BE Signed 16bit sample per each channel Big Endian',
-          'PCM_FORMAT_U16_LE Unsigned 16bit sample per channel Little Endian',
-          'PCM_FORMAT_U16_BE Unsigned 16bit sample per channel Big Endian',
-          'PCM_FORMAT_S24_LE Signed 24bit sample per channel Little Endian',
-          'PCM_FORMAT_S24_BE Signed 24bit sample per channel Big Endian',
-          'PCM_FORMAT_U24_LE Unsigned 24bit sample per channel Little Endian',
-          'PCM_FORMAT_U24_BE Unsigned 24bit samples per channel Big Endian',
-          'PCM_FORMAT_S32_BE Signed 32bit sample per channel Big Endian',
-          'PCM_FORMAT_U32_LE Unsigned 32bit sample per channel Little Endian',
-          'PCM_FORMAT_U32_BE Unsigned 32bit sample per channel Big Endian',
-          'PCM_FORMAT_FLOAT_LE 32bit samples encoded as float Little Endian',
-          'PCM_FORMAT_FLOAT_BE 32bit samples encoded as float Big Endian',
-          'PCM_FORMAT_FLOAT64_LE 64bit sample encoded as float Little Endian',
-          'PCM_FORMAT_FLOAT64_BE 64bit samples encoded as float Big Endian',
-          'PCM_FORMAT_MU_LAW A logarithmic encoding used by .au files',
-          'PCM_FORMAT_A_LAW Another logarithmic encoding',
-          'PCM_FORMAT_IMA_ADPCM A 4:1 compressed format by I.M.A.',
-          'PCM_FORMAT_MPEG MPEG encoded audio',
-          'PCM_FORMAT_GSM 9600 bits/s constant rate encoding for speech'
-        ])
-
         self.combo1 = QComboBox()
-        self.combo1.addItems(['1024', '512', '256', '128'])
+        self.combo1.addItems(['OGG', 'STDOUT (For Debug)'])
 
         self.combo2 = QComboBox()
         self.combo2.addItems(['128', '256', '512', '1024', '64', '32', '16'])
@@ -554,8 +533,7 @@ class MyMainWindow(QMainWindow):
         vboxg4 = QVBoxLayout(self.group4)
         for each_widget in (
             QLabel('<b style="color:white;">THRESHOLD of Recording'), self.dial,
-            QLabel('<b style="color:white;"> Recording Codec '), self.combo0,
-            QLabel('<b style="color:white;"> Real Time Buffer '), self.combo1,
+            QLabel('<b style="color:white;"> Sound Output Format'), self.combo1,
             QLabel('<b style="color:white;"> Sound KBps '), self.combo2,
             QLabel('<b style="color:white;"> Sound Channels '), self.combo3,
             QLabel('<b style="color:white;"> Sound Sample Rate '), self.combo4,
@@ -568,7 +546,7 @@ class MyMainWindow(QMainWindow):
         # configure some widget settings
         must_be_checked((self.nepochoose, ))
         must_have_tooltip((self.label3, self.label4, self.label6,
-            self.nepochoose, self.combo0, self.combo1, self.combo2, self.combo3,
+            self.nepochoose, self.combo1, self.combo2, self.combo3,
             self.combo4, self.combo5, self.boton))
         must_autofillbackground((self.lcdNumber2, self.lcdNumber, self.clock,
             self.label3, self.label4, self.label6, self.nepochoose))
@@ -585,7 +563,92 @@ class MyMainWindow(QMainWindow):
 
     def run(self):
         ' run forest run '
-        print((' INFO: Working at {}'.format(str(datetime.datetime.now()))))
+        print((' INFO: Working at {}'.format(str(datetime.now()))))
+        channels = 1 if self.combo3.currentText() == 'MONO' else 2
+        print((' INFO: Using {} Channels . . . '.format(channels)))
+        bitrate = int(self.combo4.currentText())
+        print((' INFO: Using {} Hz per Second . . . '.format(bitrate)))
+        threshold = int(self.dial.value())
+        print((' INFO: Using Thresold of {} . . . '.format(threshold)))
+        record_seconds = int(self.slider.value()) * 60
+        print((' INFO: Using Recording time of {} ...'.format(record_seconds)))
+        # make base directory
+        try:
+            mkdir(self.base)
+            print((' INFO: Base Directory path created {}'.format(self.base)))
+        except OSError:
+            print((' INFO: Base Directory already exist {}'.format(self.base)))
+        except:
+            print((' ERROR: Can not create Directory ?, {}'.format(self.base)))
+        # make directory tree
+        try:
+            for dr in range(1, 13):
+                mkdir(path.abspath(path.join(self.base, str(dr))))
+                print((' INFO:Directory created {}/{}'.format((self.base, dr))))
+        except OSError:
+            print((' INFO: Directory already exist {}/1,12'.format(self.base)))
+        except:
+            print((' ERROR: Cant create Directory?, {}/1,12'.format(self.base)))
+        # convert to ogg the old wav files
+        self.convertOGG()
+        # VUMeter
+        inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE)
+        inp.setrate(bitrate)
+        inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
+        inp.setperiodsize(1024)
+        # recording loop
+        while True:
+            filename = path.abspath(path.join(self.base,
+                       str(datetime.now().month),
+                       datetime.now().strftime("%Y-%m-%d_%H:%M:%S.wav")))
+            print((' INFO: Recording on the file {}'.format(filename)))
+            print((' INFO: Loop of {}'.format(bitrate / 1024 * record_seconds)))
+            print(('-' * 80))
+            w = wave.open(filename, 'w')
+            w.setnchannels(channels)
+            w.setsampwidth(2)
+            w.setframerate(bitrate)
+            for i in range(0, bitrate / 1024 * record_seconds):
+                l, data = inp.read()
+                a = int(numpy.abs(numpy.fromstring(data, dtype='int16').mean()))
+                a = a * 4
+                # Feedback to the GUI and CLI
+                # print((i, a))
+                self.progressBar.setValue(a)
+                self.progressBar2.setValue(a)
+                self.lcdNumber.display(a)
+                self.lcdNumber2.display(a)
+                # compares THRESHOLD versus a so only record if sound
+                if self.combo5.currentText() == 'SMART' and a <= threshold:
+                    continue
+                # force recording, even if its silent
+                else:
+                    w.writeframes(data) if self.combo1.currentText() == 'OGG' \
+                        else repr(data)
+            w.close()
+
+    def convertOGG(self):
+        ' convert to ogg files '
+        # convert WAV to compressed .OGG files
+        try:
+            print(' INFO: Compressing sound into .OGG files . . . ')
+            [call(''.join(('nice --adjustment=20 oggenc ', path.abspath(a))), shell=True) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.wav', '.WAV')) and not f.startswith('.')])]
+            print(' INFO: Deleting uncompressed sound files . . . ')
+            [remove(a) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.wav', '.WAV')) and not f.startswith('.')])]
+        except:
+            print((' ERROR: Cant Convert PCM to OGG files? ', linesep,
+                   ' ERROR: oggenc not found installed ??? ', linesep,
+                   ' ( sudo apt-get install vorbis-tools ) ', linesep))
+        if self.nepochoose.isChecked() is True:
+            try:
+                print(' INFO: Semantic User Experience is Auto-Tagging files ')
+                [self.nepomuk_set(a, 'testigo', 'testigo', 'Auto-Tagged file by Cinta-Testigo') for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.ogg', '.OGG')) and not f.startswith('.')])]
+                print(' INFO: Semantic User Experience Query files. . . ')
+                self.nepomuk_get('testigo')
+            except:
+                print((' ERROR: Cant use Semantic User Experience on file', linesep,
+                       ' ERROR: Nepomuk not found installed ??? ', linesep,
+                       ' ( sudo apt-get install python-kde4 ) ', linesep))
 
     ###########################################################################
 

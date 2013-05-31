@@ -609,10 +609,13 @@ class MyMainWindow(QMainWindow):
         self.dock5.setWidget(self.group5)
 
         # configure some widget settings
-        must_be_checked((self.nepochoose, self.chckbx1))
-        must_have_tooltip((self.label2, self.label4, self.label6,
+        must_be_checked((self.nepochoose, self.chckbx1,
+                         self.chckbx2, self.chckbx3))
+        must_have_tooltip((self.label2, self.label4, self.label6, self.combo0,
             self.nepochoose, self.combo1, self.combo2, self.combo3, self.combo4,
-            self.combo5, self.chckbx1, self.chckbx2, self.chckbx3, self.rec))
+            self.combo5, self.chckbx0, self.chckbx1, self.chckbx2, self.chckbx3,
+            self.rec, self.stop, self.defo, self.qq, self.die, self.kill,
+            self.button0, self.button1, self.button5))
         must_autofillbackground((self.clock, self.label2, self.label4,
             self.label6, self.nepochoose, self.chckbx0, self.chckbx1,
             self.chckbx2, self.chckbx3))

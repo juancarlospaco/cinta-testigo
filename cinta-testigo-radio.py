@@ -41,12 +41,8 @@ from webbrowser import open_new_tab
 from shutil import make_archive
 from subprocess import check_output as getoutput
 from getpass import getuser
-try:
-    from urllib.request import urlopen  # py3
-except ImportError:
-    from urllib2 import urlopen  # lint:ok
-
 from sip import setapi
+
 try:
     from PyQt4.QtGui import (QIcon, QLabel, QFileDialog, QWidget, QVBoxLayout,
         QHBoxLayout, QComboBox, QCursor, QLineEdit, QCheckBox, QPushButton,

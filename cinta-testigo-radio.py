@@ -19,7 +19,7 @@
 
 # metadata
 ' Cinta Testigo para Radios '
-__version__ = ' 0.9 '
+__version__ = ' 1.0 '
 __license__ = ' GPL '
 __author__ = ' juancarlospaco '
 __email__ = ' juancarlospaco@ubuntu.com '
@@ -33,15 +33,14 @@ __full_licence__ = 'http://opensource.org/licenses/gpl-3.0.html'
 
 # imports
 import sys
-from os import (path, linesep, geteuid, environ,
-                statvfs, mkdir, getcwd, remove, walk)
+from os import (path, linesep, geteuid, environ, statvfs, mkdir, getcwd)
 from datetime import datetime
 from subprocess import call
 from random import randint
 from webbrowser import open_new_tab
+from shutil import make_archive
 from subprocess import check_output as getoutput
-from itertools import (chain, product)
-import wave
+from getpass import getuser
 try:
     from urllib.request import urlopen  # py3
 except ImportError:
@@ -54,10 +53,11 @@ try:
         QGroupBox, QMessageBox, QCompleter, QDirModel, QLCDNumber, QAction,
         QFont, QTabWidget, QDockWidget, QToolBar, QSizePolicy, QColorDialog,
         QPalette, QPen, QPainter, QColor, QPixmap, QMenu, QDialog, QSlider,
-        QDesktopWidget, QProgressBar, QMainWindow, QFrame, QApplication,
-        QTreeWidget, QTreeWidgetItem, QColumnView, QDial)
+        QDesktopWidget, QProgressBar, QMainWindow, QApplication, QTreeWidget,
+        QTreeWidgetItem, QColumnView, QDial)
 
-    from PyQt4.QtCore import (Qt, QDir, QSize, QUrl, QTimer, QFileInfo)
+    from PyQt4.QtCore import (Qt, QDir, QSize, QUrl,
+                              QTimer, QFileInfo, QProcess)
 
     from PyQt4.QtNetwork import (QNetworkProxy, )
     from PyQt4.phonon import Phonon
@@ -84,17 +84,6 @@ except ImportError:
                              QFontDialog, )  # lint:ok
     print(" WARNING: No PyKDE ! \n ( sudo apt-get install python-kde4 ) ")
     KDE = False
-
-
-try:
-    import alsaaudio
-except ImportError:
-    exit(' ERROR: AlsaAudio not found,(sudo apt-get install python-alsaaudio)')
-
-try:
-    import numpy
-except ImportError:
-    exit(' ERROR: NumPy not found !, ( sudo apt-get install python-numpy )')
 
 
 # API 2
@@ -145,6 +134,26 @@ class MyMainWindow(QMainWindow):
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
 
+        # process
+        self.process1 = QProcess(self)
+        #self.process1.finished.connect(self.on_process1_finished)
+        #self.process1.error.connect(self.on_process1_error)
+        self.cmd1 = 'nice -n {n} arecord{v} -f {f} -c {c} -r {b} -t raw -d {s}'
+        self.process2 = QProcess(self)
+        #self.process2.finished.connect(self.on_process2_finished)
+        #self.process2.error.connect(self.on_process1_error)
+        self.cmd2 = 'oggenc - -r -C {c} -R {b} -q {q} {d}{t}{a} -o {o}'
+        self.process1.setStandardOutputProcess(self.process2)
+        self.process3 = QProcess(self)
+        #self.process3.finished.connect(self.on_process3_finished)
+        #self.process3.error.connect(self.on_process3_error)
+
+        self.cmd2 = 'oggenc - -r -C {c} -R {b} -q {q} {d}{t}{a} -o {o}'
+
+        self.cmd3 = ('nice -n 20 ' +
+          'sox "{o}" -n spectrogram -x {x} -y {y} -z 99 -t "{o}" -o "{o}.png"')
+        self.actual_file = ''
+
         # Proxy support, by reading http_proxy os env variable
         proxy_url = QUrl(environ.get('http_proxy', ''))
         QNetworkProxy.setApplicationProxy(QNetworkProxy(QNetworkProxy.HttpProxy
@@ -170,14 +179,13 @@ class MyMainWindow(QMainWindow):
         self.dock2 = QDockWidget()
         self.dock3 = QDockWidget()
         self.dock4 = QDockWidget()
-        for a in (self.dock1, self.dock2, self.dock3, self.dock4):
+        self.dock5 = QDockWidget()
+        for a in (self.dock1, self.dock2, self.dock3, self.dock4, self.dock5):
             a.setWindowModality(Qt.NonModal)
             a.setWindowOpacity(0.9)
             a.setWindowTitle(__doc__
                              if a.windowTitle() == '' else a.windowTitle())
             a.setStyleSheet('QDockWidget::title{text-align:center;}')
-            a.setFeatures(QDockWidget.DockWidgetFloatable |
-                          QDockWidget.DockWidgetMovable)
             self.mainwidget.addTab(a, QIcon.fromTheme("face-cool"),
                                    str(a.windowTitle()).strip().lower())
 
@@ -203,9 +211,11 @@ class MyMainWindow(QMainWindow):
         qamin = QAction(QIcon.fromTheme("go-down"), 'Minimize', self)
         qamin.triggered.connect(lambda: self.showMinimized())
         qamax = QAction(QIcon.fromTheme("go-up"), 'Maximize', self)
-        qanor = QAction(QIcon.fromTheme("go-up"), 'AutoCenter AutoResize', self)
+        qanor = QAction(QIcon.fromTheme("view-fullscreen"),
+                        'AutoCenter AutoResize', self)
         qanor.triggered.connect(self.center)
-        qatim = QAction(QIcon.fromTheme("go-up"), 'View Date and Time', self)
+        qatim = QAction(QIcon.fromTheme("mail-signed-verified"),
+                        'View Date and Time', self)
         qatim.triggered.connect(self.timedate)
         qabug = QAction(QIcon.fromTheme("help-about"), 'Report a Problem', self)
         qabug.triggered.connect(lambda: qabug.setDisabled(True) if not call(
@@ -226,7 +236,8 @@ class MyMainWindow(QMainWindow):
             __doc__, ''.join((__doc__, linesep, 'version ', __version__, ', (',
             __license__, '), by ', __author__, ', ( ', __email__, ' )', linesep
             ))))
-        qafnt = QAction(QIcon.fromTheme("help-about"), 'Set GUI Font', self)
+        qafnt = QAction(QIcon.fromTheme("tools-check-spelling"),
+                        'Set GUI Font', self)
         if KDE:
             font = QFont()
             qafnt.triggered.connect(lambda:
@@ -251,22 +262,23 @@ class MyMainWindow(QMainWindow):
             QApplication.desktop().winId()).save(QFileDialog.getSaveFileName(
             self.mainwidget, " Save Screenshot As ...", path.expanduser("~"),
             ';;(*.png) PNG', 'png')))
-        qatb = QAction(QIcon.fromTheme("help-browser"), 'Toggle ToolBar', self)
+        qatb = QAction(QIcon.fromTheme("go-top"), 'Toggle ToolBar', self)
         qatb.triggered.connect(lambda: self.toolbar.hide()
                 if self.toolbar.isVisible() is True else self.toolbar.show())
-        qati = QAction(QIcon.fromTheme("help-browser"),
+        qati = QAction(QIcon.fromTheme("zoom-in"),
                        'Switch ToolBar Icon Size', self)
         qati.triggered.connect(lambda:
             self.toolbar.setIconSize(self.toolbar.iconSize() * 4)
             if self.toolbar.iconSize().width() * 4 == 24
             else self.toolbar.setIconSize(self.toolbar.iconSize() / 4))
-        qasb = QAction(QIcon.fromTheme("help-browser"), 'Toggle Tabs Bar', self)
+        qasb = QAction(QIcon.fromTheme("preferences-other"),
+                       'Toggle Tabs Bar', self)
         qasb.triggered.connect(lambda: self.mainwidget.tabBar().hide()
                                if self.mainwidget.tabBar().isVisible() is True
                                else self.mainwidget.tabBar().show())
         qadoc = QAction(QIcon.fromTheme("help-browser"), 'On-line Docs', self)
         qadoc.triggered.connect(lambda: open_new_tab(str(__url__).strip()))
-        qapy = QAction(QIcon.fromTheme("help-browser"), 'About Python', self)
+        qapy = QAction(QIcon.fromTheme("help-about"), 'About Python', self)
         qapy.triggered.connect(lambda: open_new_tab('http://python.org/about'))
         qali = QAction(QIcon.fromTheme("help-browser"), 'Read Licence', self)
         qali.triggered.connect(lambda: open_new_tab(__full_licence__))
@@ -338,34 +350,15 @@ class MyMainWindow(QMainWindow):
         self.group1 = QGroupBox()
         self.group1.setTitle(__doc__)
 
-        self.lcdNumber = QLCDNumber()
-        self.lcdNumber.setFrameShape(QFrame.StyledPanel)
-        self.lcdNumber.setNumDigits(4)
-        self.lcdNumber.setSegmentStyle(QLCDNumber.Flat)
-        self.lcdNumber.display(666)
-        self.lcdNumber.setToolTip(' VUmeter LCD Display ')
-
-        self.lcdNumber2 = QLCDNumber()
-        self.lcdNumber2.setFrameShape(QFrame.StyledPanel)
-        self.lcdNumber2.setNumDigits(4)
-        self.lcdNumber2.setSegmentStyle(QLCDNumber.Flat)
-        self.lcdNumber2.display(666)
-        self.lcdNumber2.setToolTip(' VUmeter LCD Display ')
-
-        self.progressBar = QProgressBar()
-        self.progressBar.setMinimum(0)
-        self.progressBar.setMaximum(200)
-        self.progressBar.setValue(100)
-        self.progressBar.setToolTip(' VUmeter ')
-
-        self.progressBar2 = QProgressBar(self)
-        self.progressBar2.setMinimum(0)
-        self.progressBar2.setMaximum(200)
-        self.progressBar2.setValue(100)
-        self.progressBar2.setToolTip(' VUmeter ')
+        self.spec = QPushButton(self)
+        self.spec.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.spec.setMinimumSize(self.spec.size().width(), 250)
+        self.spec.setFlat(True)
+        self.spec.clicked.connect(self.spectro)
 
         self.clock = QLCDNumber()
         self.clock.setSegmentStyle(QLCDNumber.Flat)
+        self.clock.setMinimumSize(self.clock.size().width(), 50)
         self.clock.setNumDigits(25)
         self.timer1 = QTimer(self)
         self.timer1.timeout.connect(lambda: self.clock.display(
@@ -383,55 +376,80 @@ class MyMainWindow(QMainWindow):
         self.diskBar.setToolTip(str(statvfs(HOME).f_bfree *
             statvfs(HOME).f_frsize / 1024 / 1024 / 1024) + ' Gigabytes free')
 
-        self.boton = QPushButton(QIcon.fromTheme("media-record"), 'Record')
-        self.boton.clicked.connect(self.run)
+        self.feedback = QPlainTextEdit(''.join(('<center><h3>', __doc__,
+            ', version', __version__, __license__, ' <br> by ', __author__,
+            ' <i>(Dev)</i>, Daniel Zas <i>(Q.A.)</i></h3></center>')))
+
+        self.rec = QPushButton(QIcon.fromTheme("media-record"), 'Record')
+        self.rec.setMinimumSize(self.rec.size().width(), 50)
+        self.rec.clicked.connect(self.run)
+
+        self.stop = QPushButton(QIcon.fromTheme("media-playback-stop"), 'Stop')
+        self.stop.clicked.connect(self.end)
+
+        self.kill = QPushButton(QIcon.fromTheme("process-stop"), 'Kill')
+        self.kill.clicked.connect(self.killer)
 
         vboxg1 = QVBoxLayout(self.group1)
-        for each_widget in (QLabel('<b style="color:white;"> VUMeters '),
-            self.progressBar, self.lcdNumber,
-            self.progressBar2, self.lcdNumber2,
+        for each_widget in (
+            QLabel('<b style="color:white;"> Spectro'), self.spec,
             QLabel('<b style="color:white;"> Time '), self.clock,
-            QLabel('<b style="color:white;"> Disk Space '), self.diskBar,
-            QLabel('<b style="color:white;"> Actions '), self.boton):
+            QLabel('<b style="color:white;"> Disk '), self.diskBar,
+            QLabel('<b style="color:white;"> STDOUT + STDIN '), self.feedback,
+            QLabel('<b style="color:white;"> Record '), self.rec, self.stop,
+            self.kill):
             vboxg1.addWidget(each_widget)
 
         self.group2 = QGroupBox()
         self.group2.setTitle(__doc__)
 
-        self.file1 = QLineEdit()
-        self.file1.setPlaceholderText('/full/path/to/one_file.py')
-        self.file1.setCompleter(self.completer)
-        self.borig = QPushButton(QIcon.fromTheme("folder-open"), 'Open')
-
         self.slider = QSlider(self)
         self.slider.setCursor(QCursor(Qt.ClosedHandCursor))
-        self.slider.setMinimum(30)
-        self.slider.setMaximum(120)
+        self.slider.setMinimum(10)
+        self.slider.setMaximum(240)
         self.slider.setValue(30)
         self.slider.setOrientation(Qt.Vertical)
         self.slider.setTickPosition(QSlider.TicksBothSides)
-        self.slider.setTickInterval(30)
-        self.slider.setSingleStep(30)
-        self.slider.setPageStep(30)
+        self.slider.setTickInterval(10)
+        self.slider.setSingleStep(10)
+        self.slider.setPageStep(10)
 
         vboxg2 = QVBoxLayout(self.group2)
         for each_widget in (
             QLabel('<b style="color:white;">MINUTES of recording'), self.slider,
-            ):
+            QLabel('<b style="color:white;"> Default: 30 Min')):
             vboxg2.addWidget(each_widget)
 
         group3 = QGroupBox()
         group3.setTitle(__doc__)
-        self.label3 = QLabel(str(alsaaudio.cards()).replace("', u'", "<br>"))
-        self.label4 = QLabel(str(alsaaudio.mixers()).replace("', u'", "<br>"))
-        self.label6 = QLabel(str(getoutput('oggenc --version', shell=1)))
-        print((' INFO: Using Cards {}'.format(alsaaudio.cards())))
-        print((' INFO: Using Mixers {}'.format(alsaaudio.mixers())))
+        self.label2 = QLabel(getoutput('sox --version', shell=True))
+        self.label4 = QLabel(getoutput('arecord --version', shell=True)[:25])
+        self.label6 = QLabel(str(getoutput('oggenc --version', shell=True)))
+
+        self.button5 = QPushButton(QIcon.fromTheme("audio-x-generic"),
+                                   'OGG --> ZIP')
+        self.button5.clicked.connect(lambda: make_archive(
+            str(QFileDialog.getSaveFileName(self, "Save OGG to ZIP file As...",
+            getcwd(), ';;(*.zip)', 'zip')).replace('.zip', ''), "zip",
+            path.abspath(path.join(getcwd(), str(datetime.now().year)))))
+
+        self.button1 = QPushButton(QIcon.fromTheme("folder-open"), 'Files')
+        self.button1.clicked.connect(lambda:
+                                     call('xdg-open ' + getcwd(), shell=True))
+
+        self.button0 = QPushButton(
+            QIcon.fromTheme("preferences-desktop-screensaver"), 'LCD OFF')
+        self.button0.clicked.connect(lambda:
+            call('xset dpms force off', shell=True))
+
         vboxg3 = QVBoxLayout(group3)
         for each_widget in (
-            QLabel('<b style="color:white;"> Sound Hardware '), self.label3,
-            QLabel('<b style="color:white;"> Sound Mixers '), self.label4,
-            QLabel('<b style="color:white;"> Off-line Out Codec'), self.label6):
+            QLabel('<b style="color:white;"> OGG Output Codec '), self.label6,
+            QLabel('<b style="color:white;"> Raw Record Backend '), self.label4,
+            QLabel('<b style="color:white;"> Helper Libs '), self.label2,
+            QLabel('<b style="color:white;"> OGG ZIP '), self.button5,
+            QLabel('<b style="color:white;"> Files '), self.button1,
+            QLabel('<b style="color:white;"> LCD '), self.button0):
             vboxg3.addWidget(each_widget)
         container = QWidget()
         hbox = QHBoxLayout(container)
@@ -505,16 +523,13 @@ class MyMainWindow(QMainWindow):
         self.group4 = QGroupBox()
         self.group4.setTitle(__doc__)
 
-        self.dial = QDial()
-        self.dial.setCursor(QCursor(Qt.ClosedHandCursor))
-        self.dial.setMinimum(0)
-        self.dial.setMaximum(9)
-        self.dial.setValue(0)
-        self.dial.setWrapping(False)
-        self.dial.setNotchesVisible(True)
+        self.combo0 = QComboBox()
+        self.combo0.addItems(['S16_LE', 'S32_LE', 'S16_BE', 'U16_LE', 'U16_BE',
+          'S24_LE', 'S24_BE', 'U24_LE', 'U24_BE', 'S32_BE', 'U32_LE', 'U32_BE'])
 
         self.combo1 = QComboBox()
-        self.combo1.addItems(['OGG', 'STDOUT (For Debug)'])
+        self.combo1.addItems(['-1', '0', '1', '2', '3', '4',
+                              '5', '6', '7', '8', '9', '10'])
 
         self.combo2 = QComboBox()
         self.combo2.addItems(['128', '256', '512', '1024', '64', '32', '16'])
@@ -527,30 +542,80 @@ class MyMainWindow(QMainWindow):
                               '22050', '16000', '11025', '8000'])
 
         self.combo5 = QComboBox(self)
-        self.combo5.addItems(['SMART', 'FORCE'])
+        self.combo5.addItems(['20', '19', '18', '17', '16', '15', '14', '13',
+            '12', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'])
 
         self.nepochoose = QCheckBox('Auto-Tag Files using Nepomuk Semantic')
 
+        self.chckbx0 = QCheckBox('Disable Software based Volume Control')
+
+        self.chckbx1 = QCheckBox('Output Sound Stereo-to-Mono Downmix')
+
+        self.chckbx2 = QCheckBox('Add Date and Time MetaData to Sound files')
+
+        self.chckbx3 = QCheckBox('Add Yourself as the Author Artist of Sound')
+
         vboxg4 = QVBoxLayout(self.group4)
         for each_widget in (
-            QLabel('<b style="color:white;">THRESHOLD of Recording'), self.dial,
-            QLabel('<b style="color:white;"> Sound Output Format'), self.combo1,
+            QLabel('<b style="color:white;"> Sound Record Format'), self.combo0,
+            QLabel('<b style="color:white;"> Sound OGG Quality'), self.combo1,
             QLabel('<b style="color:white;"> Sound KBps '), self.combo2,
             QLabel('<b style="color:white;"> Sound Channels '), self.combo3,
             QLabel('<b style="color:white;"> Sound Sample Rate '), self.combo4,
-            QLabel('<b style="color:white;">Detection Recording'), self.combo5,
+            QLabel('<b style="color:white;"> Sound Volume'), self.chckbx0,
+            QLabel('<b style="color:white;"> Sound Mix'), self.chckbx1,
+            QLabel('<b style="color:white;"> Sound Meta'), self.chckbx2,
+            QLabel('<b style="color:white;"> Sound Authorship'), self.chckbx3,
+            QLabel('<b style="color:white;"> CPUs Priority'), self.combo5,
             QLabel('<b style="color:white;">Nepomuk Semantic User Experience'),
             self.nepochoose):
             vboxg4.addWidget(each_widget)
         self.dock4.setWidget(self.group4)
 
+        # dock 5
+        QLabel('<h1 style="color:white;"> Voice Changer ! </h1>', self.dock5
+               ).resize(self.dock5.size().width() / 3, 25)
+        self.group5 = QGroupBox()
+        self.group5.setTitle(__doc__)
+
+        self.dial = QDial()
+        self.dial.setCursor(QCursor(Qt.OpenHandCursor))
+        self.dial.sliderPressed.connect(lambda:
+                            self.dial.setCursor(QCursor(Qt.ClosedHandCursor)))
+        self.dial.sliderReleased.connect(lambda:
+                            self.dial.setCursor(QCursor(Qt.OpenHandCursor)))
+        self.dial.setValue(0)
+        self.dial.setMinimum(-999)
+        self.dial.setMaximum(999)
+        self.dial.setSingleStep(100)
+        self.dial.setPageStep(100)
+        self.dial.setWrapping(False)
+        self.dial.setNotchesVisible(True)
+
+        self.defo = QPushButton(QIcon.fromTheme("media-playback-start"), 'Run')
+        self.defo.setMinimumSize(self.defo.size().width(), 50)
+        self.defo.clicked.connect(lambda: self.process3.start(
+            'play "|rec -q -n -d -R riaa pitch {}"'.format(self.dial.value())))
+
+        self.qq = QPushButton(QIcon.fromTheme("media-playback-stop"), 'Stop')
+        self.qq.clicked.connect(self.process3.terminate)
+
+        self.die = QPushButton(QIcon.fromTheme("process-stop"), 'Kill')
+        self.die.clicked.connect(self.process3.kill)
+
+        vboxg5 = QVBoxLayout(self.group5)
+        for each_widget in (self.dial, self.defo, self.qq, self.die):
+            vboxg5.addWidget(each_widget)
+        self.dock5.setWidget(self.group5)
+
         # configure some widget settings
-        must_be_checked((self.nepochoose, ))
-        must_have_tooltip((self.label3, self.label4, self.label6,
-            self.nepochoose, self.combo1, self.combo2, self.combo3,
-            self.combo4, self.combo5, self.boton))
-        must_autofillbackground((self.lcdNumber2, self.lcdNumber, self.clock,
-            self.label3, self.label4, self.label6, self.nepochoose))
+        must_be_checked((self.nepochoose, self.chckbx1))
+        must_have_tooltip((self.label2, self.label4, self.label6,
+            self.nepochoose, self.combo1, self.combo2, self.combo3, self.combo4,
+            self.combo5, self.chckbx1, self.chckbx2, self.chckbx3, self.rec))
+        must_autofillbackground((self.clock, self.label2, self.label4,
+            self.label6, self.nepochoose, self.chckbx0, self.chckbx1,
+            self.chckbx2, self.chckbx3))
 
     def play(self, index):
         ' play with delay '
@@ -562,17 +627,67 @@ class MyMainWindow(QMainWindow):
             self.model.filePath(index)))
         self.media.play()
 
+    def end(self):
+        ' kill it with fire '
+        print((' INFO: Stoping Processes at {}'.format(str(datetime.now()))))
+        self.feedback.setText('''
+            <h5>Errors for RECORDER QProcess 1:</h5>{}<hr>
+            <h5>Errors for ENCODER QProcess 2:</h5>{}<hr>
+            <h5>Output for RECORDER QProcess 1:</h5>{}<hr>
+            <h5>Output for ENCODER QProcess 2:</h5>{}<hr>
+            '''.format(self.process1.readAllStandardError(),
+                       self.process2.readAllStandardError(),
+                       self.process1.readAllStandardOutput(),
+                       self.process2.readAllStandardOutput(),
+        ))
+        self.process1.terminate()
+        self.process2.terminate()
+
+    def killer(self):
+        ' kill -9 '
+        QMessageBox.information(self.mainwidget, __doc__,
+            ' KILL -9 was sent to the multi-process backend ! ')
+        self.process1.kill()
+        self.process2.kill()
+
     def run(self):
         ' run forest run '
         print((' INFO: Working at {}'.format(str(datetime.now()))))
-        channels = 1 if self.combo3.currentText() == 'MONO' else 2
-        print((' INFO: Using {} Channels . . . '.format(channels)))
-        bitrate = int(self.combo4.currentText())
-        print((' INFO: Using {} Hz per Second . . . '.format(bitrate)))
+
+        chnl = 1 if self.combo3.currentText() == 'MONO' else 2
+        print((' INFO: Using {} Channels . . . '.format(chnl)))
+
+        btrt = int(self.combo4.currentText())
+        print((' INFO: Using {} Hz per Second . . . '.format(btrt)))
+
         threshold = int(self.dial.value())
         print((' INFO: Using Thresold of {} . . . '.format(threshold)))
-        record_seconds = int(self.slider.value()) * 60
-        print((' INFO: Using Recording time of {} ...'.format(record_seconds)))
+
+        secs = int(self.slider.value()) * 60
+        print((' INFO: Using Recording time of {} ...'.format(secs)))
+
+        frmt = str(self.combo0.currentText()).strip()
+        print((' INFO: Using Recording quality of {} ...'.format(frmt)))
+
+        qlt = str(self.combo1.currentText()).strip()
+        print((' INFO: Using Recording quality of {} ...'.format(qlt)))
+
+        prio = str(self.combo5.currentText()).strip()
+        print((' INFO: Using CPU Priority of {} ...'.format(prio)))
+
+        downmix = '--downmix ' if self.chckbx1.isChecked() is True else ''
+        print((' INFO: Using Downmix is {} ...'.format(downmix)))
+
+        aut = '-a ' + getuser() if self.chckbx3.isChecked() is True else ''
+        print((' INFO: The Author Artist of this sound is: {}'.format(aut)))
+
+        T = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        tim = '--date {} '.format(T) if self.chckbx2.isChecked() is True else ''
+        print((' INFO: The Date and Time of this sound is: {}'.format(tim)))
+
+        vol = ' --disable-softvol' if self.chckbx0.isChecked() is True else ''
+        print((' INFO: Software based Volume Control is: {}'.format(vol)))
+
         # make base directory
         try:
             mkdir(self.base)
@@ -581,6 +696,7 @@ class MyMainWindow(QMainWindow):
             print((' INFO: Base Directory already exist {}'.format(self.base)))
         except:
             print((' ERROR: Can not create Directory ?, {}'.format(self.base)))
+
         # make directory tree
         try:
             for dr in range(1, 13):
@@ -590,72 +706,43 @@ class MyMainWindow(QMainWindow):
             print((' INFO: Directory already exist {}/1,12'.format(self.base)))
         except:
             print((' ERROR: Cant create Directory?, {}/1,12'.format(self.base)))
-        # convert to ogg the old wav files
-        self.convertOGG()
-        # VUMeter
-        inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE)
-        inp.setrate(bitrate)
-        inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
-        inp.setperiodsize(1024)
-        # recording loop
-        while True:
-            filename = path.abspath(path.join(self.base,
-                       str(datetime.now().month),
-                       datetime.now().strftime("%Y-%m-%d_%H:%M:%S.wav")))
-            print((' INFO: Recording on the file {}'.format(filename)))
-            print((' INFO: Loop of {}'.format(bitrate / 1024 * record_seconds)))
-            print(('-' * 80))
-            w = wave.open(filename, 'w')
-            w.setnchannels(channels)
-            w.setsampwidth(2)
-            w.setframerate(bitrate)
-            for i in range(0, bitrate / 1024 * record_seconds):
-                l, data = inp.read()
-                a = int(numpy.abs(numpy.fromstring(data, dtype='int16').mean()))
-                a = a * 4
-                # Feedback to the GUI and CLI
-                # print((i, a))
-                self.progressBar.setValue(a)
-                self.progressBar2.setValue(a)
-                self.lcdNumber.display(a)
-                self.lcdNumber2.display(a)
-                # compares THRESHOLD versus a so only record if sound
-                if self.combo5.currentText() == 'SMART' and a <= threshold:
-                    continue
-                # force recording, even if its silent
-                else:
-                    w.writeframes(data) if self.combo1.currentText() == 'OGG' \
-                        else repr(data)
-            w.close()
 
-    def convertOGG(self):
-        ' convert to ogg files '
-        # convert WAV to compressed .OGG files
-        try:
-            print(' INFO: Compressing sound into .OGG files . . . ')
-            [call(''.join(('nice --adjustment=20 oggenc ', path.abspath(a))), shell=True) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.wav', '.WAV')) and not f.startswith('.')])]
-            print(' INFO: Deleting uncompressed sound files . . . ')
-            [remove(a) for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.wav', '.WAV')) and not f.startswith('.')])]
-        except:
-            print((' ERROR: Cant Convert PCM to OGG files? ', linesep,
-                   ' ERROR: oggenc not found installed ??? ', linesep,
-                   ' ( sudo apt-get install vorbis-tools ) ', linesep))
-        if self.nepochoose.isChecked() is True:
-            try:
-                print(' INFO: Semantic User Experience is Auto-Tagging files ')
-                [self.nepomuk_set(a, 'testigo', 'testigo', 'Auto-Tagged file by Cinta-Testigo') for a in iter(["{}/{}".format(root, f) for root, f in list(chain(*[list(product([root], files)) for root, dirs, files in walk(self.base)])) if f.endswith(('.ogg', '.OGG')) and not f.startswith('.')])]
-                print(' INFO: Semantic User Experience Query files. . . ')
-                self.nepomuk_get('testigo')
-            except:
-                print((' ERROR: Cant use Semantic User Experience ', linesep,
-                       ' ERROR: Nepomuk not found installed ??? ', linesep,
-                       ' ( sudo apt-get install python-kde4 ) ', linesep))
+        # make new filename
+        flnm = path.abspath(path.join(self.base, str(datetime.now().month),
+                   datetime.now().strftime("%Y-%m-%d_%H:%M:%S.ogg")))
+        self.actual_file = flnm
+        print((' INFO: Recording on the file {}'.format(flnm)))
+
+        # make custom commands
+        cmd1 = self.cmd1.format(n=prio, f=frmt, c=chnl, b=btrt, s=secs, v=vol)
+        cmd2 = self.cmd2.format(c=chnl, b=btrt, q=qlt,
+                                d=downmix, o=flnm, a=aut, t=tim)
+        print((cmd1, cmd2))
+        #  multiprocess recording loop pipe
+        self.process1.start(cmd1)
+        if not self.process1.waitForStarted():
+            print((" ERROR: RECORDER QProcess 1 Failed: \n {}   ".format(cmd1)))
+        self.process2.start(cmd2)
+        if not self.process2.waitForStarted():
+            print((" ERROR: ENCODER QProcess 2 Failed: \n   {} ".format(cmd2)))
+        self.nepomuk_set(flnm, 'testigo', 'testigo', 'AutoTag by Cinta-Testigo')
+        self.nepomuk_get('testigo')
+
+    def spectro(self):
+        ' spectrometer '
+        wid = self.spec.size().width()
+        hei = self.spec.size().height()
+        command = self.cmd3.format(o=self.actual_file, x=wid, y=hei)
+        call('rm --verbose --force {}/*/*.ogg.png'.format(self.base), shell=1)
+        call(command, shell=True)
+        self.spec.setIcon(QIcon('{o}.png'.format(o=self.actual_file)))
+        self.spec.setIconSize(QSize(self.spec.size()))
+        self.spec.resize(wid, hei)
 
     ###########################################################################
 
     def paintEvent(self, event):
         'Paint semi-transparent background, animated pattern, background text'
-        # because we are on 2012 !, its time to showcase how Qt we are !
         QWidget.paintEvent(self, event)
         # make a painter
         p = QPainter(self)
@@ -674,9 +761,9 @@ class MyMainWindow(QMainWindow):
         # Rotate painter 45 Degree
         p.rotate(35)
         # Set painter Font for text
-        p.setFont(QFont('Ubuntu', 200))
+        p.setFont(QFont('Ubuntu', 300))
         # draw the background text, with antialiasing
-        p.drawText(99, 99, "Radio")
+        p.drawText(99, 199, "Radio")
         # Rotate -45 the QPen back !
         p.rotate(-35)
         # set the pen to no pen

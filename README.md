@@ -1,7 +1,9 @@
 cinta-testigo-radio
 ===================
 
-Cinta testigo libre para Radioemisoras basadas en Linux, usando PyQt, graba a .OGG con nombre de archivo cronologico
+Cinta testigo libre para Radioemisoras basadas en Linux, usando PyQt, graba a .OGG con nombre de archivo cronologico,
+
+Multi-processing, Nepomuk, Solid, KIO, KUI, Voice Changer, Spectrometer, .OGG.ZIP as option, Proxy Auto-config and more...
 
 ![screenshot](https://lh3.googleusercontent.com/-aG1oqq3qp0c/Uagd_L5ldnI/AAAAAAAADCE/qy6629lUeag/w1240-h885-no/temp.jpg)
 

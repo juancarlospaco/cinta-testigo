@@ -3,10 +3,7 @@ cinta-testigo-radio
 
 Cinta testigo libre para Radioemisoras basadas en Linux, usando PyQt, graba a .OGG con nombre de archivo cronologico
 
-![screenshot](https://lh5.googleusercontent.com/-21jJLfbzZeE/UWpMhonxCxI/AAAAAAAACl4/dr-1sJfj6bE/s816/temp.jpg)
-
-
-![screenshot](https://lh5.googleusercontent.com/-edgJkemn0AE/UFJGKW5zeFI/AAAAAAAAB1M/szuxBKUJTds/s882/temp.jpg)
+![screenshot](https://lh3.googleusercontent.com/-aG1oqq3qp0c/Uagd_L5ldnI/AAAAAAAADCE/qy6629lUeag/w1240-h885-no/temp.jpg)
 
 
 ![screenshot](https://lh4.googleusercontent.com/-Z9r-fTnSiDE/UaXaxx8EEMI/AAAAAAAADBI/I8OdA-BmGh8/w1291-h690-no/temp.jpg)
@@ -14,7 +11,7 @@ Cinta testigo libre para Radioemisoras basadas en Linux, usando PyQt, graba a .O
 
 Required:
 
-sudo apt-get install vorbis-tools python-qt4 python-qt4-phonon python-alsaaudio python-numpy 
+sudo apt-get install vorbis-tools python-qt4 python-qt4-phonon sox
 
 
 Optional:

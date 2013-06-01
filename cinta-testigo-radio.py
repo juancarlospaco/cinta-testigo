@@ -50,9 +50,9 @@ try:
         QFont, QTabWidget, QDockWidget, QToolBar, QSizePolicy, QColorDialog,
         QPalette, QPen, QPainter, QColor, QPixmap, QMenu, QDialog, QSlider,
         QDesktopWidget, QProgressBar, QMainWindow, QApplication, QTreeWidget,
-        QTreeWidgetItem, QColumnView, QDial)
+        QTreeWidgetItem, QColumnView, QDial, QTabBar, QGraphicsDropShadowEffect)
 
-    from PyQt4.QtCore import (Qt, QDir, QSize, QUrl,
+    from PyQt4.QtCore import (Qt, QDir, QSize, QUrl, QEvent,
                               QTimer, QFileInfo, QProcess)
 
     from PyQt4.QtNetwork import (QNetworkProxy, )
@@ -101,6 +101,54 @@ else:
 
 print(('#' * 80))
 print((''.join((__doc__, ',v.', __version__, __license__, ' by ', __author__))))
+
+
+###############################################################################
+
+
+class TabBar(QTabBar):
+    ' custom tab bar '
+    def __init__(self, parent):
+        ' init class custom tab bar '
+        QTabBar.__init__(self, parent)
+        self._editor = QLineEdit(self)
+        self._editor.setToolTip(' Type a Tab Name ')
+        self._editor.setWindowFlags(Qt.Popup)
+        self._editor.setFocusProxy(self)
+        self._editor.editingFinished.connect(self.handleEditingFinished)
+        self._editor.installEventFilter(self)
+
+    def eventFilter(self, widget, event):
+        ' filter mouse, esc key,  events '
+        if ((event.type() == QEvent.MouseButtonPress and
+             not self._editor.geometry().contains(event.globalPos())) or
+            (event.type() == QEvent.KeyPress and
+             event.key() == Qt.Key_Escape)):
+            self._editor.hide()
+            return True
+        return QTabBar.eventFilter(self, widget, event)
+
+    def mouseDoubleClickEvent(self, event):
+        ' handle double click '
+        index = self.tabAt(event.pos())
+        if index >= 0:
+            self.editTab(index)
+
+    def editTab(self, index):
+        ' handle the editor '
+        rect = self.tabRect(index)
+        self._editor.setFixedSize(rect.size())
+        self._editor.move(self.parent().mapToGlobal(rect.topLeft()))
+        self._editor.setText(self.tabText(index))
+        if not self._editor.isVisible():
+            self._editor.show()
+
+    def handleEditingFinished(self):
+        ' set text when editing has finished '
+        index = self.currentIndex()
+        if index >= 0:
+            self._editor.hide()
+            self.setTabText(index, self._editor.text())
 
 
 ###############################################################################
@@ -164,12 +212,14 @@ class MyMainWindow(QMainWindow):
         self.mainwidget.setToolTip(__doc__)
         self.mainwidget.setMovable(True)
         self.mainwidget.setTabShape(QTabWidget.Triangular)
-        self.mainwidget.setTabsClosable(True)
         self.mainwidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.mainwidget.tabCloseRequested.connect(lambda:
-            self.mainwidget.setTabPosition(1)
-            if self.mainwidget.tabPosition() == 0
-            else self.mainwidget.setTabPosition(0))
+            self.mainwidget.setTabPosition(randint(0, 3)))
+            # if self.mainwidget.tabPosition() == 0
+            # else self.mainwidget.setTabPosition(0))
+        self.mainwidget.setStyleSheet('QTabBar{color:white;font-weight:bold;}')
+        self.mainwidget.setTabBar(TabBar(self))
+        self.mainwidget.setTabsClosable(True)
         self.setCentralWidget(self.mainwidget)
         self.dock1 = QDockWidget()
         self.dock2 = QDockWidget()
@@ -178,12 +228,12 @@ class MyMainWindow(QMainWindow):
         self.dock5 = QDockWidget()
         for a in (self.dock1, self.dock2, self.dock3, self.dock4, self.dock5):
             a.setWindowModality(Qt.NonModal)
-            a.setWindowOpacity(0.9)
+            # a.setWindowOpacity(0.9)
             a.setWindowTitle(__doc__
                              if a.windowTitle() == '' else a.windowTitle())
             a.setStyleSheet('QDockWidget::title{text-align:center;}')
-            self.mainwidget.addTab(a, QIcon.fromTheme("face-cool"),
-                                   str(a.windowTitle()).strip().lower())
+            self.mainwidget.addTab(a, QIcon.fromTheme("face-smile"),
+                                   'Double Click Me')
 
         # Paleta de colores para pintar transparente
         self.palette().setBrush(QPalette.Base, Qt.transparent)
@@ -295,10 +345,9 @@ class MyMainWindow(QMainWindow):
         qatit.triggered.connect(self.seTitle)
         self.toolbar.addWidget(self.left_spacer)
         self.toolbar.addSeparator()
-        for b in (qaqq, qamin, qanor, qamax, qasrc, qakb, qacol, qatim, qatb,
-            qafnt, qati, qasb, qatit, qapic, qadoc, qali, qaslf, qaqt, qakde,
-            qapy, qabug):
-            self.toolbar.addAction(b)
+        self.toolbar.addActions((qaqq, qamin, qanor, qamax, qasrc, qakb, qacol,
+            qatim, qatb, qafnt, qati, qasb, qatit, qapic, qadoc, qali, qaslf,
+            qaqt, qakde, qapy, qabug))
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.toolbar.addSeparator()
         self.toolbar.addWidget(self.right_spacer)
@@ -335,6 +384,30 @@ class MyMainWindow(QMainWindow):
             for each_widget in widget_list:
                 try:
                     each_widget.setAutoFillBackground(True)
+                except:
+                    pass
+
+        def must_glow(widget_list):
+            ' apply an glow effect to the widget '
+            for glow, each_widget in enumerate(widget_list):
+                try:
+                    if each_widget.graphicsEffect() is None:
+                        glow = QGraphicsDropShadowEffect(self)
+                        glow.setOffset(0)
+                        glow.setBlurRadius(99)
+                        glow.setColor(QColor(99, 255, 255))
+                        each_widget.setGraphicsEffect(glow)
+                        # glow.setEnabled(False)
+                        try:
+                            each_widget.clicked.connect(lambda:
+                            each_widget.graphicsEffect().setEnabled(True)
+                            if each_widget.graphicsEffect().isEnabled() is False
+                            else each_widget.graphicsEffect().setEnabled(False))
+                        except:
+                            each_widget.sliderPressed.connect(lambda:
+                            each_widget.graphicsEffect().setEnabled(True)
+                            if each_widget.graphicsEffect().isEnabled() is False
+                            else each_widget.graphicsEffect().setEnabled(False))
                 except:
                     pass
 
@@ -421,6 +494,7 @@ class MyMainWindow(QMainWindow):
         self.label2 = QLabel(getoutput('sox --version', shell=True))
         self.label4 = QLabel(getoutput('arecord --version', shell=True)[:25])
         self.label6 = QLabel(str(getoutput('oggenc --version', shell=True)))
+        self.label6.setStyleSheet('*{border-radius:5px;}')
 
         self.button5 = QPushButton(QIcon.fromTheme("audio-x-generic"),
                                    'OGG --> ZIP')
@@ -436,7 +510,7 @@ class MyMainWindow(QMainWindow):
         self.button0 = QPushButton(
             QIcon.fromTheme("preferences-desktop-screensaver"), 'LCD OFF')
         self.button0.clicked.connect(lambda:
-            call('xset dpms force off', shell=True))
+            call('sleep 3 ; xset dpms force off', shell=True))
 
         vboxg3 = QVBoxLayout(group3)
         for each_widget in (
@@ -553,8 +627,8 @@ class MyMainWindow(QMainWindow):
 
         vboxg4 = QVBoxLayout(self.group4)
         for each_widget in (
-            QLabel('<b style="color:white;"> Sound Record Format'), self.combo0,
             QLabel('<b style="color:white;"> Sound OGG Quality'), self.combo1,
+            QLabel('<b style="color:white;"> Sound Record Format'), self.combo0,
             QLabel('<b style="color:white;"> Sound KBps '), self.combo2,
             QLabel('<b style="color:white;"> Sound Channels '), self.combo3,
             QLabel('<b style="color:white;"> Sound Sample Rate '), self.combo4,
@@ -615,6 +689,7 @@ class MyMainWindow(QMainWindow):
         must_autofillbackground((self.clock, self.label2, self.label4,
             self.label6, self.nepochoose, self.chckbx0, self.chckbx1,
             self.chckbx2, self.chckbx3))
+        must_glow((self.rec, self.dial, self.combo1))
 
     def play(self, index):
         ' play with delay '
@@ -629,7 +704,7 @@ class MyMainWindow(QMainWindow):
     def end(self):
         ' kill it with fire '
         print((' INFO: Stoping Processes at {}'.format(str(datetime.now()))))
-        self.feedback.setText('''
+        self.feedback.setText(u'''
             <h5>Errors for RECORDER QProcess 1:</h5>{}<hr>
             <h5>Errors for ENCODER QProcess 2:</h5>{}<hr>
             <h5>Output for RECORDER QProcess 1:</h5>{}<hr>
@@ -662,7 +737,7 @@ class MyMainWindow(QMainWindow):
         threshold = int(self.dial.value())
         print((' INFO: Using Thresold of {} . . . '.format(threshold)))
 
-        secs = int(self.slider.value()) * 60
+        secs = int(self.slider.value()) + 1 * 60
         print((' INFO: Using Recording time of {} ...'.format(secs)))
 
         frmt = str(self.combo0.currentText()).strip()
@@ -770,7 +845,7 @@ class MyMainWindow(QMainWindow):
         # Background Color
         p.setBrush(QColor(0, 0, 0))
         # Background Opacity
-        p.setOpacity(0.75)
+        p.setOpacity(0.9)
         # Background Rounded Borders
         p.drawRoundedRect(self.rect(), 50, 50)
         # finalize the painter

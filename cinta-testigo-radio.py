@@ -447,7 +447,8 @@ class MyMainWindow(QMainWindow):
 
         self.feedback = QPlainTextEdit(''.join(('<center><h3>', __doc__,
             ', version', __version__, __license__, ' <br> by ', __author__,
-            ' <i>(Dev)</i>, Daniel Zas <i>(Q.A.)</i></h3></center>')))
+            ' <i>(Dev)</i>, Radio Comunitaria FM Reconquista <i>(Q.A.)</i><br>',
+            'FMReconquista.org.ar & GitHub.com/JuanCarlosPaco/Cinta-Testigo')))
 
         self.rec = QPushButton(QIcon.fromTheme("media-record"), 'Record')
         self.rec.setMinimumSize(self.rec.size().width(), 50)
@@ -473,13 +474,22 @@ class MyMainWindow(QMainWindow):
         self.group2.setTitle(__doc__)
 
         self.slider = QSlider(self)
-        self.slider.setCursor(QCursor(Qt.ClosedHandCursor))
+        self.slid_l = QLabel(self.slider)
+        self.slider.setCursor(QCursor(Qt.OpenHandCursor))
+        self.slider.sliderPressed.connect(lambda:
+                            self.slider.setCursor(QCursor(Qt.ClosedHandCursor)))
+        self.slider.sliderReleased.connect(lambda:
+                            self.slider.setCursor(QCursor(Qt.OpenHandCursor)))
+        self.slider.valueChanged.connect(lambda:
+                            self.slider.setToolTip(str(self.slider.value())))
+        self.slider.valueChanged.connect(lambda: self.slid_l.setText(
+                    '<h2 style="color:white;">{}'.format(self.slider.value())))
         self.slider.setMinimum(10)
-        self.slider.setMaximum(240)
+        self.slider.setMaximum(99)
         self.slider.setValue(30)
         self.slider.setOrientation(Qt.Vertical)
         self.slider.setTickPosition(QSlider.TicksBothSides)
-        self.slider.setTickInterval(10)
+        self.slider.setTickInterval(2)
         self.slider.setSingleStep(10)
         self.slider.setPageStep(10)
 
@@ -598,7 +608,7 @@ class MyMainWindow(QMainWindow):
           'S24_LE', 'S24_BE', 'U24_LE', 'U24_BE', 'S32_BE', 'U32_LE', 'U32_BE'])
 
         self.combo1 = QComboBox()
-        self.combo1.addItems(['-1', '0', '1', '2', '3', '4',
+        self.combo1.addItems(['2', '-1', '0', '1', '3', '4',
                               '5', '6', '7', '8', '9', '10'])
 
         self.combo2 = QComboBox()
@@ -650,10 +660,16 @@ class MyMainWindow(QMainWindow):
 
         self.dial = QDial()
         self.dial.setCursor(QCursor(Qt.OpenHandCursor))
+        self.di_l = QLabel(self.dial)
+        self.di_l.resize(self.dial.size() / 8)
         self.dial.sliderPressed.connect(lambda:
                             self.dial.setCursor(QCursor(Qt.ClosedHandCursor)))
         self.dial.sliderReleased.connect(lambda:
                             self.dial.setCursor(QCursor(Qt.OpenHandCursor)))
+        self.dial.valueChanged.connect(lambda:
+                            self.dial.setToolTip(str(self.dial.value())))
+        self.dial.valueChanged.connect(lambda: self.di_l.setText(
+                    '<h1 style="color:white;">{}'.format(self.dial.value())))
         self.dial.setValue(0)
         self.dial.setMinimum(-999)
         self.dial.setMaximum(999)
@@ -845,7 +861,7 @@ class MyMainWindow(QMainWindow):
         # Background Color
         p.setBrush(QColor(0, 0, 0))
         # Background Opacity
-        p.setOpacity(0.9)
+        p.setOpacity(0.75)
         # Background Rounded Borders
         p.drawRoundedRect(self.rect(), 50, 50)
         # finalize the painter
@@ -889,6 +905,7 @@ class MyMainWindow(QMainWindow):
 
     def center(self):
         ' Center and resize the window '
+        self.showNormal()
         self.resize(QDesktopWidget().screenGeometry().width() // 1.25,
                     QDesktopWidget().screenGeometry().height() // 1.25)
         qr = self.frameGeometry()
@@ -972,6 +989,8 @@ def main():
     app.setApplicationName(__doc__)
     app.setOrganizationName(__author__)
     app.setOrganizationDomain(__author__)
+    app.setStyle('Plastique')
+    app.setStyle('Oxygen')
     # w is gonna be the mymainwindow class
     w = MyMainWindow()
     # set the class with the attribute of translucent background as true

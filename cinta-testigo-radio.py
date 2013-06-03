@@ -80,6 +80,12 @@ except ImportError:
                              QFontDialog, )  # lint:ok
     print(" WARNING: No PyKDE ! \n ( sudo apt-get install python-kde4 ) ")
     KDE = False
+try:
+    # py2
+    str = unicode  # lint:ok
+except NameError:
+    # py3
+    pass
 
 
 # API 2
@@ -504,7 +510,6 @@ class MyMainWindow(QMainWindow):
         self.label2 = QLabel(getoutput('sox --version', shell=True))
         self.label4 = QLabel(getoutput('arecord --version', shell=True)[:25])
         self.label6 = QLabel(str(getoutput('oggenc --version', shell=True)))
-        self.label6.setStyleSheet('*{border-radius:5px;}')
 
         self.button5 = QPushButton(QIcon.fromTheme("audio-x-generic"),
                                    'OGG --> ZIP')
@@ -608,7 +613,7 @@ class MyMainWindow(QMainWindow):
           'S24_LE', 'S24_BE', 'U24_LE', 'U24_BE', 'S32_BE', 'U32_LE', 'U32_BE'])
 
         self.combo1 = QComboBox()
-        self.combo1.addItems(['2', '-1', '0', '1', '3', '4',
+        self.combo1.addItems(['1', '-1', '0', '2', '3', '4',
                               '5', '6', '7', '8', '9', '10'])
 
         self.combo2 = QComboBox()
@@ -681,13 +686,16 @@ class MyMainWindow(QMainWindow):
         self.defo = QPushButton(QIcon.fromTheme("media-playback-start"), 'Run')
         self.defo.setMinimumSize(self.defo.size().width(), 50)
         self.defo.clicked.connect(lambda: self.process3.start(
-            'play "|rec -q -n -d -R riaa pitch {}"'.format(self.dial.value())))
+            'play -q -V0 "|rec -q -V0 -n -d -R riaa pitch {} reverb"'
+            .format(self.dial.value()) if int(self.dial.value()) != 0 else
+            'play -q -V0 "|rec -q -V0 --multi-threaded -n -d -R bend {} "'
+            .format(' 3,2500,3 3,-2500,3 ' * 999)))
 
         self.qq = QPushButton(QIcon.fromTheme("media-playback-stop"), 'Stop')
-        self.qq.clicked.connect(self.process3.terminate)
+        self.qq.clicked.connect(self.process3.kill)
 
         self.die = QPushButton(QIcon.fromTheme("process-stop"), 'Kill')
-        self.die.clicked.connect(self.process3.kill)
+        self.die.clicked.connect(lambda: call('killall rec', shell=True))
 
         vboxg5 = QVBoxLayout(self.group5)
         for each_widget in (self.dial, self.defo, self.qq, self.die):
@@ -753,7 +761,7 @@ class MyMainWindow(QMainWindow):
         threshold = int(self.dial.value())
         print((' INFO: Using Thresold of {} . . . '.format(threshold)))
 
-        secs = int(self.slider.value()) + 1 * 60
+        secs = int(self.slider.value()) * 60 + 2
         print((' INFO: Using Recording time of {} ...'.format(secs)))
 
         frmt = str(self.combo0.currentText()).strip()
@@ -823,10 +831,14 @@ class MyMainWindow(QMainWindow):
         wid = self.spec.size().width()
         hei = self.spec.size().height()
         command = self.cmd3.format(o=self.actual_file, x=wid, y=hei)
+        print(' INFO: Spectrometer is deleting OLD .ogg.png Files on target ')
         call('rm --verbose --force {}/*/*.ogg.png'.format(self.base), shell=1)
+        print(' INFO: Spectrometer finished Deleting Files, Starting Render ')
         call(command, shell=True)
+        print((''' INFO: Spectrometer finished Rendering Sound using:
+               {}{}   OutPut: {}'''.format(command, linesep, self.actual_file)))
         self.spec.setIcon(QIcon('{o}.png'.format(o=self.actual_file)))
-        self.spec.setIconSize(QSize(self.spec.size()))
+        self.spec.setIconSize(QSize(wid, hei))
         self.spec.resize(wid, hei)
 
     ###########################################################################
@@ -914,6 +926,8 @@ class MyMainWindow(QMainWindow):
 
     def nepomuk_set(self, file_tag=None, __tag='', _label='', _description=''):
         ' Quick and Easy Nepomuk Taggify for Files '
+        print((''' INFO: Semantic Desktop Experience is Tagging Files :
+              {}, {}, {}, {})'''.format(file_tag, __tag, _label, _description)))
         if Nepomuk.ResourceManager.instance().init() is 0:
             fle = Nepomuk.Resource(KUrl(QFileInfo(file_tag).absoluteFilePath()))
             _tag = Nepomuk.Tag(__tag)
@@ -924,10 +938,11 @@ class MyMainWindow(QMainWindow):
             return ([str(a.label()) for a in fle.tags()], fle.description())
         else:
             print(" ERROR: FAIL: Nepomuk is not running ! ")
-            return
 
     def nepomuk_get(self, query_to_search):
         ' Quick and Easy Nepomuk Query for Files '
+        print((''' INFO: Semantic Desktop Experience is Quering Files :
+              {} '''.format(query_to_search)))
         results = []
         nepo = Nepomuk.Query.QueryServiceClient()
         nepo.desktopQuery("hasTag:{}".format(query_to_search))

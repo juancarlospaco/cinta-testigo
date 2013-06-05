@@ -1008,7 +1008,7 @@ def main():
                   -h, --help        Show help informations and exit.
                   -v, --version     Show version information and exit.
                   -o, --opaque      Use Opaque GUI.
-                  -b, --border      Use WM Borders.
+                  -b, --borderless  No WM Borders.
                   Run without parameters and arguments to use the GUI.
             ''')
             return sys.exit(1)
@@ -1032,7 +1032,7 @@ def main():
     if OPAQUE is True:
         w.setAttribute(Qt.WA_TranslucentBackground, True)
     # WM Borders
-    if BORDER is True:
+    if BORDER is False:
         w.setWindowFlags(w.windowFlags() | Qt.FramelessWindowHint)
     # run the class
     w.show()

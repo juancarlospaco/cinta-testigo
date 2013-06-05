@@ -57,7 +57,8 @@ try:
         QFont, QTabWidget, QDockWidget, QToolBar, QSizePolicy, QColorDialog,
         QPalette, QPen, QPainter, QColor, QPixmap, QMenu, QDialog, QSlider,
         QDesktopWidget, QProgressBar, QMainWindow, QApplication, QTreeWidget,
-        QTreeWidgetItem, QColumnView, QDial, QTabBar, QGraphicsDropShadowEffect)
+        QTreeWidgetItem, QColumnView, QDial, QTabBar, QGraphicsDropShadowEffect,
+        QSystemTrayIcon)
 
     from PyQt4.QtCore import (Qt, QDir, QSize, QUrl, QEvent,
                               QTimer, QFileInfo, QProcess)
@@ -358,6 +359,24 @@ class MyMainWindow(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.toolbar.addSeparator()
         self.toolbar.addWidget(self.right_spacer)
+        # define the menu
+        menu = self.menuBar()
+        # File menu items
+        menu.addMenu('&File').addActions((qaqq, ))
+        menu.addMenu('&Window').addActions((qamax, qanor, qamin))
+        # Settings menu
+        menu.addMenu('&Settings').addActions((qasrc, qacol, qafnt, qatim,
+                                              qatb, qati, qasb, qapic))
+        # Help menu items
+        menu.addMenu('&Help').addActions((qadoc, qakb, qabug, qali,
+                                          qaqt, qakde, qapy, qaslf))
+        # Tray Icon
+        tray = QSystemTrayIcon(QIcon.fromTheme("face-devilish"), self)
+        tray.setToolTip(__doc__)
+        traymenu = QMenu()
+        traymenu.addActions((qamax, qanor, qamin, qaqq))
+        tray.setContextMenu(traymenu)
+        tray.show()
 
         def contextMenuRequested(point):
             ' quick and dirty custom context menu '

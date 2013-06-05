@@ -31,6 +31,13 @@ __source__ = ''
 __full_licence__ = 'http://opensource.org/licenses/gpl-3.0.html'
 
 
+# snakes fight
+try:  # py2
+    str, range, input = unicode, xrange, raw_input  # lint:ok
+except NameError:  # py3
+    buffer, long = memoryview, int  # lint:ok
+
+
 # imports
 import sys
 from os import (path, linesep, geteuid, environ, statvfs, mkdir, getcwd)
@@ -80,12 +87,10 @@ except ImportError:
                              QFontDialog, )  # lint:ok
     print(" WARNING: No PyKDE ! \n ( sudo apt-get install python-kde4 ) ")
     KDE = False
-try:
-    # py2
+try:  # py2
     str = unicode  # lint:ok
 except NameError:
-    # py3
-    pass
+    pass  # py3
 
 
 # API 2
@@ -219,13 +224,9 @@ class MyMainWindow(QMainWindow):
         self.mainwidget.setMovable(True)
         self.mainwidget.setTabShape(QTabWidget.Triangular)
         self.mainwidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.mainwidget.tabCloseRequested.connect(lambda:
-            self.mainwidget.setTabPosition(randint(0, 3)))
-            # if self.mainwidget.tabPosition() == 0
-            # else self.mainwidget.setTabPosition(0))
         self.mainwidget.setStyleSheet('QTabBar{color:white;font-weight:bold;}')
         self.mainwidget.setTabBar(TabBar(self))
-        self.mainwidget.setTabsClosable(True)
+        self.mainwidget.setTabsClosable(False)
         self.setCentralWidget(self.mainwidget)
         self.dock1 = QDockWidget()
         self.dock2 = QDockWidget()
@@ -761,7 +762,7 @@ class MyMainWindow(QMainWindow):
         threshold = int(self.dial.value())
         print((' INFO: Using Thresold of {} . . . '.format(threshold)))
 
-        secs = int(self.slider.value()) * 60 + 2
+        secs = int(self.slider.value()) * 60 + 1
         print((' INFO: Using Recording time of {} ...'.format(secs)))
 
         frmt = str(self.combo0.currentText()).strip()

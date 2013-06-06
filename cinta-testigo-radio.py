@@ -204,8 +204,6 @@ class MyMainWindow(QMainWindow):
         #self.process3.finished.connect(self.on_process3_finished)
         #self.process3.error.connect(self.on_process3_error)
 
-        self.cmd2 = 'oggenc - -r -C {c} -R {b} -q {q} {d}{t}{a} -o {o}'
-
         self.cmd3 = ('nice -n 20 ' +
           'sox "{o}" -n spectrogram -x {x} -y {y} -z 99 -t "{o}" -o "{o}.png"')
         self.actual_file = ''

@@ -761,8 +761,8 @@ class MyMainWindow(QMainWindow):
 
     def go(self):
         ' run timeout re-starting timers '
-        self.timerFirst.start(int(self.slider.value()) * 1000000)
-        self.timerSecond.start(int(self.slider.value()) * 1000000 + 1000)
+        self.timerFirst.start(int(self.slider.value()) * 60 * 1000)
+        self.timerSecond.start(int(self.slider.value()) * 60 * 1000 + 1000)
         self.run()
 
     def run(self):

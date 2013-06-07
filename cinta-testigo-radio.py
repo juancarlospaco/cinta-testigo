@@ -31,13 +31,6 @@ __source__ = ''
 __full_licence__ = 'http://opensource.org/licenses/gpl-3.0.html'
 
 
-# snakes fight
-try:  # py2
-    str, range, input = unicode, xrange, raw_input  # lint:ok
-except NameError:  # py3
-    buffer, long = memoryview, int  # lint:ok
-
-
 # imports
 import sys
 from os import (path, linesep, geteuid, environ, statvfs, mkdir, getcwd)
@@ -88,10 +81,6 @@ except ImportError:
                              QFontDialog, )  # lint:ok
     print(" WARNING: No PyKDE ! \n ( sudo apt-get install python-kde4 ) ")
     KDE = False
-try:  # py2
-    str = unicode  # lint:ok
-except NameError:
-    pass  # py3
 
 
 # API 2
@@ -168,10 +157,11 @@ class TabBar(QTabBar):
 
 class MyMainWindow(QMainWindow):
     ' Main Window '
-    def __init__(self, parent=None):
+    def __init__(self, AUTO):
         ' Initialize QWidget inside MyMainWindow '
-        super(MyMainWindow, self).__init__(parent)
+        super(MyMainWindow, self).__init__()
         QWidget.__init__(self)
+        self.auto = AUTO
         self.statusBar().showMessage('               {}'.format(__doc__))
         self.setStyleSheet('QStatusBar{color:grey;}')
         self.setWindowTitle(__doc__)
@@ -191,15 +181,10 @@ class MyMainWindow(QMainWindow):
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
 
         # process
-        self.process1 = QProcess(self)
-        #self.process1.finished.connect(self.on_process1_finished)
-        #self.process1.error.connect(self.on_process1_error)
-        self.cmd1 = 'nice -n {n} arecord{v} -f {f} -c {c} -r {b} -t raw -d {s}'
-        self.process2 = QProcess(self)
-        #self.process2.finished.connect(self.on_process2_finished)
-        #self.process2.error.connect(self.on_process1_error)
+        self.process1 = None
+        self.process2 = None
+        self.cmd1 = 'nice -n {n} arecord{v} -f {f} -c {c} -r {b} -t raw'
         self.cmd2 = 'oggenc - -r -C {c} -R {b} -q {q} {d}{t}{a} -o {o}'
-        self.process1.setStandardOutputProcess(self.process2)
         self.process3 = QProcess(self)
         #self.process3.finished.connect(self.on_process3_finished)
         #self.process3.error.connect(self.on_process3_error)
@@ -207,6 +192,12 @@ class MyMainWindow(QMainWindow):
         self.cmd3 = ('nice -n 20 ' +
           'sox "{o}" -n spectrogram -x {x} -y {y} -z 99 -t "{o}" -o "{o}.png"')
         self.actual_file = ''
+
+        # re starting timers, one stops, one starts
+        self.timerFirst = QTimer(self)
+        self.timerFirst.timeout.connect(self.end)
+        self.timerSecond = QTimer(self)
+        self.timerSecond.timeout.connect(self.run)
 
         # Proxy support, by reading http_proxy os env variable
         proxy_url = QUrl(environ.get('http_proxy', ''))
@@ -476,7 +467,7 @@ class MyMainWindow(QMainWindow):
 
         self.rec = QPushButton(QIcon.fromTheme("media-record"), 'Record')
         self.rec.setMinimumSize(self.rec.size().width(), 50)
-        self.rec.clicked.connect(self.run)
+        self.rec.clicked.connect(self.go)  # self.run
 
         self.stop = QPushButton(QIcon.fromTheme("media-playback-stop"), 'Stop')
         self.stop.clicked.connect(self.end)
@@ -732,6 +723,8 @@ class MyMainWindow(QMainWindow):
             self.label6, self.nepochoose, self.chckbx0, self.chckbx1,
             self.chckbx2, self.chckbx3))
         must_glow((self.rec, self.dial, self.combo1))
+        if self.auto is True:
+            self.go()
 
     def play(self, index):
         ' play with delay '
@@ -766,6 +759,12 @@ class MyMainWindow(QMainWindow):
         self.process1.kill()
         self.process2.kill()
 
+    def go(self):
+        ' run timeout re-starting timers '
+        self.timerFirst.start(int(self.slider.value()) * 1000000)
+        self.timerSecond.start(int(self.slider.value()) * 1000000 + 1000)
+        self.run()
+
     def run(self):
         ' run forest run '
         print((' INFO: Working at {}'.format(str(datetime.now()))))
@@ -779,8 +778,7 @@ class MyMainWindow(QMainWindow):
         threshold = int(self.dial.value())
         print((' INFO: Using Thresold of {} . . . '.format(threshold)))
 
-        secs = int(self.slider.value()) * 60 + 1
-        print((' INFO: Using Recording time of {} ...'.format(secs)))
+        print((' INFO: Using Recording time of {}'.format(self.slider.value())))
 
         frmt = str(self.combo0.currentText()).strip()
         print((' INFO: Using Recording quality of {} ...'.format(frmt)))
@@ -830,11 +828,14 @@ class MyMainWindow(QMainWindow):
         print((' INFO: Recording on the file {}'.format(flnm)))
 
         # make custom commands
-        cmd1 = self.cmd1.format(n=prio, f=frmt, c=chnl, b=btrt, s=secs, v=vol)
+        cmd1 = self.cmd1.format(n=prio, f=frmt, c=chnl, b=btrt, v=vol)
         cmd2 = self.cmd2.format(c=chnl, b=btrt, q=qlt,
                                 d=downmix, o=flnm, a=aut, t=tim)
         print((cmd1, cmd2))
         #  multiprocess recording loop pipe
+        self.process1 = QProcess(self)
+        self.process2 = QProcess(self)
+        self.process1.setStandardOutputProcess(self.process2)
         self.process1.start(cmd1)
         if not self.process1.waitForStarted():
             print((" ERROR: RECORDER QProcess 1 Failed: \n {}   ".format(cmd1)))
@@ -993,9 +994,10 @@ def main():
     from getopt import getopt
     OPAQUE = True
     BORDER = True
+    AUTO = False
     try:
-        opts, args = getopt(sys.argv[1:], 'hvob',
-                                   ['version', 'help', 'opaque', 'borderless'])
+        opts, args = getopt(sys.argv[1:], 'hvoba',
+                            ['version', 'help', 'opaque', 'borderless', 'auto'])
         pass
     except:
         pass
@@ -1004,6 +1006,7 @@ def main():
             print('''
             Usage:
                   -h, --help        Show help informations and exit.
+                  -a, --auto        Auto-Start Recording at start up.
                   -v, --version     Show version information and exit.
                   -o, --opaque      Use Opaque GUI.
                   -b, --borderless  No WM Borders.
@@ -1017,6 +1020,8 @@ def main():
                 OPAQUE = False
         elif o in ('-b', '--borderless'):
                 BORDER = False
+        elif o in ('-a', '--auto'):
+            AUTO = True
     # define our App
     app = QApplication(sys.argv)
     app.setApplicationName(__doc__)
@@ -1025,7 +1030,7 @@ def main():
     app.setStyle('Plastique')
     app.setStyle('Oxygen')
     # w is gonna be the mymainwindow class
-    w = MyMainWindow()
+    w = MyMainWindow(AUTO)
     # set the class with the attribute of translucent background as true
     if OPAQUE is True:
         w.setAttribute(Qt.WA_TranslucentBackground, True)

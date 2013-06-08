@@ -723,6 +723,7 @@ class MyMainWindow(QMainWindow):
             self.label6, self.nepochoose, self.chckbx0, self.chckbx1,
             self.chckbx2, self.chckbx3))
         must_glow((self.rec, self.dial, self.combo1))
+        self.nepomuk_get('testigo')
         if self.auto is True:
             self.go()
 
@@ -843,7 +844,6 @@ class MyMainWindow(QMainWindow):
         if not self.process2.waitForStarted():
             print((" ERROR: ENCODER QProcess 2 Failed: \n   {} ".format(cmd2)))
         self.nepomuk_set(flnm, 'testigo', 'testigo', 'AutoTag by Cinta-Testigo')
-        self.nepomuk_get('testigo')
 
     def spectro(self):
         ' spectrometer '

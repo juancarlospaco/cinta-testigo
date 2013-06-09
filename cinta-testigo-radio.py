@@ -752,6 +752,8 @@ class MyMainWindow(QMainWindow):
         ))
         self.process1.terminate()
         self.process2.terminate()
+        self.process1.kill()
+        self.process2.kill()
 
     def killer(self):
         ' kill -9 '

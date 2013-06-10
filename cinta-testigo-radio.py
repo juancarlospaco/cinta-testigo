@@ -41,6 +41,7 @@ from webbrowser import open_new_tab
 from shutil import make_archive
 from subprocess import check_output as getoutput
 from getpass import getuser
+from re import sub
 from sip import setapi
 
 try:
@@ -695,7 +696,7 @@ class MyMainWindow(QMainWindow):
         self.defo = QPushButton(QIcon.fromTheme("media-playback-start"), 'Run')
         self.defo.setMinimumSize(self.defo.size().width(), 50)
         self.defo.clicked.connect(lambda: self.process3.start(
-            'play -q -V0 "|rec -q -V0 -n -d -R riaa pitch {} reverb"'
+            'play -q -V0 "|rec -q -V0 -n -d -R riaa pitch {} "'
             .format(self.dial.value()) if int(self.dial.value()) != 0 else
             'play -q -V0 "|rec -q -V0 --multi-threaded -n -d -R bend {} "'
             .format(' 3,2500,3 3,-2500,3 ' * 999)))
@@ -740,7 +741,9 @@ class MyMainWindow(QMainWindow):
     def end(self):
         ' kill it with fire '
         print((' INFO: Stoping Processes at {}'.format(str(datetime.now()))))
-        self.feedback.setText(u'''
+        self.process1.terminate()
+        self.process2.terminate()
+        self.feedback.setText('''
             <h5>Errors for RECORDER QProcess 1:</h5>{}<hr>
             <h5>Errors for ENCODER QProcess 2:</h5>{}<hr>
             <h5>Output for RECORDER QProcess 1:</h5>{}<hr>
@@ -750,10 +753,6 @@ class MyMainWindow(QMainWindow):
                        self.process1.readAllStandardOutput(),
                        self.process2.readAllStandardOutput(),
         ))
-        self.process1.terminate()
-        self.process2.terminate()
-        self.process1.kill()
-        self.process2.kill()
 
     def killer(self):
         ' kill -9 '

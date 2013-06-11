@@ -41,7 +41,6 @@ from webbrowser import open_new_tab
 from shutil import make_archive
 from subprocess import check_output as getoutput
 from getpass import getuser
-from re import sub
 from sip import setapi
 
 try:
@@ -517,9 +516,14 @@ class MyMainWindow(QMainWindow):
 
         group3 = QGroupBox()
         group3.setTitle(__doc__)
-        self.label2 = QLabel(getoutput('sox --version', shell=True))
-        self.label4 = QLabel(getoutput('arecord --version', shell=True)[:25])
-        self.label6 = QLabel(str(getoutput('oggenc --version', shell=True)))
+        try:
+            self.label2 = QLabel(getoutput('sox --version', shell=True))
+            self.label4 = QLabel(getoutput('arecord --version', shell=1)[:25])
+            self.label6 = QLabel(str(getoutput('oggenc --version', shell=True)))
+        except:
+            print(''' ERROR: No SOX, OGGenc avaliable !
+                  ( sudo apt-get install vorbis-tools sox alsa-utils ) ''')
+            exit()
 
         self.button5 = QPushButton(QIcon.fromTheme("audio-x-generic"),
                                    'OGG --> ZIP')
@@ -763,8 +767,8 @@ class MyMainWindow(QMainWindow):
 
     def go(self):
         ' run timeout re-starting timers '
-        self.timerFirst.start(int(self.slider.value()) * 60 * 1000)
-        self.timerSecond.start(int(self.slider.value()) * 60 * 1000 + 1000)
+        self.timerFirst.start(int(self.slider.value()) * 60 * 1000 + 2000)
+        self.timerSecond.start(int(self.slider.value()) * 60 * 1000 + 2100)
         self.run()
 
     def run(self):

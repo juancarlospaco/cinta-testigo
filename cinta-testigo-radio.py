@@ -138,6 +138,7 @@ class TabBar(QTabBar):
     def editTab(self, index):
         ' handle the editor '
         rect = self.tabRect(index)
+        self.setTabTextColor(index, QColorDialog.getColor())
         self._editor.setFixedSize(rect.size())
         self._editor.move(self.parent().mapToGlobal(rect.topLeft()))
         self._editor.setText(self.tabText(index))
@@ -768,7 +769,7 @@ class MyMainWindow(QMainWindow):
     def go(self):
         ' run timeout re-starting timers '
         self.timerFirst.start(int(self.slider.value()) * 60 * 1000 + 2000)
-        self.timerSecond.start(int(self.slider.value()) * 60 * 1000 + 2100)
+        self.timerSecond.start(int(self.slider.value()) * 60 * 1000 + 2010)
         self.run()
 
     def run(self):
